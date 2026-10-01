@@ -19,6 +19,11 @@ Unit tests will check individual functions in isolation, using mocked GitHub and
 - **Repository validation:** Check valid GitHub repository URLs, empty or malformed inputs, unsupported dependencies, and missing HTML pages. Test commit-count boundaries of 0, 1, 50, and 51 to verify the supported 1–50 commit limit.
 - **Commit selection and grouping:** Verify that selected commits belong to the repository and that AI-generated groups contain consecutive commits, with each analyzed commit appearing exactly once.
 - **Processing status:** Verify that capture results produce the correct Complete, Partially Complete, or Failed status, while preserving successful results and recording failure reasons.
+- **Screenshot processing:** Verify that screenshots are associated with the correct commit and selected HTML page. Test successful captures, missing screenshots, individual capture failures, and multiple screenshots across different commits.
+- **Visual comparison:** Verify that when two commits are selected for comparison, the correct screenshots are matched to those commits and ordered correctly according to the comparison rules.
+- **Error-message generation:** Verify that specific failures produce the correct user-facing error message.
+- **AI response validation:** Verify that AI responses follow the expected structure, reference only valid commits and screenshots, and handle missing, malformed, or incomplete responses correctly.
+  
 
 Unit tests will run during development and before merging changes. Each test will compare the actual result with a defined expected result.
 
@@ -29,5 +34,8 @@ These tests will verify that repository retrieval, screenshot capture, saved res
 - **Complete user workflow:** Submit a supported repository, select an HTML page and commits, generate screenshots, navigate the visual timeline, compare versions, and reopen the saved analysis from the project gallery. Confirm that each screenshot matches its selected commit.
 - **Failure handling and recovery:** Test inaccessible repositories, unsupported projects, GitHub or AI service failures, and individual screenshot failures. Confirm that users receive clear messages, successful captures remain available, and earlier saved analyses are preserved. Leave and reopen an analysis during processing to verify that progress is retained.
 - **AI output quality:** Compare screenshots with known visible changes and an unchanged screenshot pair. Verify that explanations describe observable differences without inventing changes or unsupported behavior, and that commit-group recommendations refer to real commits and supporting changes. Use controlled responses for repeatable automated checks and manually review live AI results for accuracy.
+- **Saved analysis and gallery:** Verify that completed analyses can be saved, reopened, renamed, and deleted. Confirm that repository information, commits, screenshots, AI results, and processing status are restored correctly when an analysis is reopened.
+- **Screenshot pipeline:** Verify that selected commits are processed correctly and that screenshots are generated for the correct version of the project. Confirm that each screenshot is matched with the correct commit and selected HTML page.
+  
 
 Integration and end-to-end tests will run after major feature integration and before each sprint demonstration. Results will be checked against the relevant acceptance criteria, and failed scenarios will be recorded and retested after fixes.
