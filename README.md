@@ -39,3 +39,35 @@ These tests will verify that repository retrieval, screenshot capture, saved res
   
 
 Integration and end-to-end tests will run after major feature integration and before each sprint demonstration. Results will be checked against the relevant acceptance criteria, and failed scenarios will be recorded and retested after fixes.
+
+
+## Steps to get setup
+
+Setup Python Virtual Environment (Optional)
+
+- ` python3 -m venv .venv `   
+    - Creates a virtual python environment to install required packages on instead of local machine
+- ` source .venv/bin/activate `
+    - Used to enter the virtual python shell
+    - ! Different command to use on windows !
+    - ` .\.venv\Scripts\Activate.ps1 `
+
+Setup Frontend React app
+
+- Install Node (Setup using node v22.13.0)
+    - https://nodejs.org/en/download
+
+- The React app was already scaffolded using Vite (Build manager tool)
+    - ! DO NOT RUN THIS COMMAND ! 
+    - ` npm create vite@latest `
+        - Name: Frontend
+        - Framework: React
+        - Variant: JavaScript
+        - Linter: ESLint
+
+- While in the `/backend` directory, run `npm install` to download the required dependencies
+
+- To Start the dev server run `npm run dev`
+
+Setup Django Backend
+
