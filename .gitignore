@@ -1,0 +1,6 @@
+.DS_Store
+backend/.venv
+backend/config/__pycache__
+backend/git_gallery_app/__pycache__
+backend/git_gallery_app/migrations/__pycache__
+backend/mongo_migrations/__pycache__

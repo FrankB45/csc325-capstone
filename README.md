@@ -71,3 +71,12 @@ Setup Frontend React app
 
 Setup Django Backend
 
+- A Template was used to scaffold this project 
+    - https://github.com/mongodb-labs/django-mongodb-project
+    - ! DO NOT RUN THIS COMMAND !
+    - ` python -m django startproject config . --template https://github.com/mongodb-labs/django-mongodb-project/archive/refs/heads/6.0.x.zip `
+
+- ` python -m install -r requirements.txt `
+    - Inside the python venv install the requirements
+    - requirements include: Django, django-mongodb-backend, djangorestframework
+
