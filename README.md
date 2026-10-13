@@ -12,6 +12,10 @@
 
 Git Gallery will use two categories of tests to verify the user stories and acceptance criteria in [the Sprint 0 artifact](docs/sprint0-artifacts/Sprint0.md). These tests are planned for implementation as the application is developed.
 
+### Figma Prototype
+https://www.figma.com/design/CzEo1jVIzXH8DadnHSwzzb/Frontend-UI?t=rcLuVbHy7wpRciBp-0
+
+
 ### 1. Unit Testing
 
 Unit tests will check individual functions in isolation, using mocked GitHub and AI responses so results are repeatable and do not depend on external services.
