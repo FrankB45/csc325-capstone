@@ -8,13 +8,47 @@
 - Git, an industry standard version control tool, only produces text results when showing differences between code commits. This is useful for developers, but almost useless for a non-technical audience like designers or managers. Git Gallery instead produces visual results for the changes between commits for these users to view and compare how a webpage looked as it was changed over time. 
 - The project will be narrowly scoped to ensure the team can complete it with the time given. Git Gallery accepts a link to a public GitHub repository and with a few additional (but optional) setup steps, produces the visual timeline for your project. The requirements to be an acceptable repository will be strict to ensure simple, repeatable functionality. The submitted GitHub project must be a simple HTML, CSS, and JavaScript website, with other criteria to ensure that it can be processed. 
 - AI supports the project by selecting commits and interpreting their visual differences. It reviews commit messages and code changes to group consecutive commits into related milestones and recommends which commits to capture. For a selected screenshot pair, AI provides explanations of visible changes and highlights the areas of change. 
+
+## Prototype
+
+Direct Prototype Link: https://www.figma.com/proto/CzEo1jVIzXH8DadnHSwzzb/Frontend-UI?node-id=24-44&p=f&t=GtrlEeQ1tzYoUvKd-1&scaling=min-zoom&content-scaling=fixed&page-id=0%3A1&starting-point-node-id=24%3A44
+
+Project Files Link: https://www.figma.com/design/CzEo1jVIzXH8DadnHSwzzb/Frontend-UI?node-id=0-1&t=nIUkZCQ61IuXc6PK-1
+
+User Experience / User Journey Video: *INSERT VIDEO HERE*
+
+## Architecture 
+
+- Git Gallery will use a Client/Server architecture, with a React Frontend that communicates with a Django REST API.  
+
+- The client or Frontend will allow users to submit repositories as new projects, browse all available projects and explore timelines.  
+
+- The backend will use Django and Django REST Framework and will be organized into three layers: an API layer to handle requests, validate repos, and return project information; a service layer to manage project state; and a data layer to read/write project data, submit processing jobs and fetch results.   
+
+- To ensure a user does not get stalled when submitting a project for processing, we will have a background worker that processes jobs. Jobs will be stored in MongoDB and processed sequentially by the worker. It will retrieve information from GitHub, Interact with the AI provider and capture screenshots via Playwright. It will save progress and results back into MongoDB and a location for screenshots after processing. This pattern is a ”Producer-Consumer” pattern as one service produces jobs and the background service consumes them to process.
+
+![Architecture Screenshot](./docs/sprint1-artifacts/arch.png)
+
+### Personas
+
+| Name, Role | Ada — UX/UI Designer - Primary User |
+|---|---|
+| **Context** | Designs and reviews websites, often joining after development has started. Uses GitHub to follow progress but struggles with code and technical diffs. |
+| **Goals** | Understand visual changes quickly; track design iterations; communicate with clients; bridge the gap between design and development. |
+| **Pain Points** | Unclear commit messages; confusing code diffs; missing screenshots; difficulty reconstructing past designs. |
+| **Constraints** | Limited programming knowledge; no software installations; needs a visual interface; reviews projects across devices. |
+
+| Name, Role | Charles — Project Manager |
+|---|---|
+| **Context** | Coordinates developers and designers. Monitors development through GitHub and explains project progress to stakeholders without writing code. |
+| **Goals** | Simplify progress updates; identify when features appeared; visualize development stages; align the team and stakeholders. |
+| **Pain Points** | Technical commit messages; time-consuming investigations; inconsistent commit logs; lack of visual product history. |
+| **Constraints** | Limited analysis time; avoids source code; needs an accurate visual timeline; requires a browser-based tool. |
+
+
 ## Test Plan
 
 Git Gallery will use two categories of tests to verify the user stories and acceptance criteria in [the Sprint 0 artifact](docs/sprint0-artifacts/Sprint0.md). These tests are planned for implementation as the application is developed.
-
-### Figma Prototype
-https://www.figma.com/design/CzEo1jVIzXH8DadnHSwzzb/Frontend-UI?t=rcLuVbHy7wpRciBp-0
-
 
 ### 1. Unit Testing
 
@@ -44,6 +78,15 @@ These tests will verify that repository retrieval, screenshot capture, saved res
 
 Integration and end-to-end tests will run after major feature integration and before each sprint demonstration. Results will be checked against the relevant acceptance criteria, and failed scenarios will be recorded and retested after fixes.
 
+## Context Diagram
+
+Git Gallery is shown as one system in the context diagram. A user (project manager or web designer) provides repositories, commit selections and receives the gallery, progress info, timelines, screenshots, and comparisons. GitHub provides repository files and commits histories. The AI service receives commit-change info or screenshot pairs and returns grouping recommendations or visual analysis. Internal parts of Git Gallery have not been represented here, like database, processing, storage, etc.
+
+![Context diagram](docs/sprint1-artifacts/sprint1-context-diagram.png)
+
+## AI Use Statement
+
+In Progress...
 
 ## Installation and local setup
 
@@ -122,6 +165,7 @@ cd frontend
 npm install
 npm run dev
 ```
+
 
 
 
