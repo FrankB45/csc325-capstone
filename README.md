@@ -43,3 +43,85 @@ These tests will verify that repository retrieval, screenshot capture, saved res
   
 
 Integration and end-to-end tests will run after major feature integration and before each sprint demonstration. Results will be checked against the relevant acceptance criteria, and failed scenarios will be recorded and retested after fixes.
+
+
+## Installation and local setup
+
+### MongoDB
+
+From the repository root:
+
+```sh
+docker compose up
+```
+
+This starts the docker container in your running terminal. The container will stop if you close the terminal. 
+
+The backend is configured to use:
+
+- **Connection:** `mongodb://localhost:27017/`
+- **Database:** `git_gallery`
+
+MongoDB stores its data in the Docker volume named `mongo_data` in `compose.yaml`, so the data persists when the container is stopped and restarted.
+
+### Backend
+
+From the repository root:
+
+```sh
+cd backend
+```
+
+Create a Python virtual environment inside the backend folder. This keeps the project's Python dependencies separate from other projects.
+
+**macOS / Linux:**
+
+```sh
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+**Windows PowerShell:**
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+Your terminal prompt will usually show `(.venv)` once the environment is active.
+
+Install the backend dependencies:
+
+```sh
+python -m pip install -r requirements.txt
+```
+
+Check the Django configuration and apply any existing database migrations:
+
+```sh
+python manage.py check
+python manage.py migrate
+```
+
+The initial scaffold has no application models, so there are no migrations to apply.
+
+Start the backend:
+
+```sh
+python manage.py runserver
+```
+
+Leave this terminal running. The backend should be available at:
+
+http://127.0.0.1:8000
+
+### Frontend
+
+```sh
+cd frontend
+npm install
+npm run dev
+```
+
+
+

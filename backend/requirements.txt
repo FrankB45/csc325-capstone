@@ -1,0 +1,3 @@
+Django==6.0.9
+django-mongodb-backend==6.0.4
+djangorestframework==3.18.3
