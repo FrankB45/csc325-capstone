@@ -11,11 +11,11 @@
 
 ## Prototype
 
-Direct Prototype Link: https://www.figma.com/proto/CzEo1jVIzXH8DadnHSwzzb/Frontend-UI?node-id=24-44&p=f&t=GtrlEeQ1tzYoUvKd-1&scaling=min-zoom&content-scaling=fixed&page-id=0%3A1&starting-point-node-id=24%3A44
+**<u>Direct Prototype Link:</u>** https://www.figma.com/proto/CzEo1jVIzXH8DadnHSwzzb/Frontend-UI?node-id=24-44&p=f&t=GtrlEeQ1tzYoUvKd-1&scaling=min-zoom&content-scaling=fixed&page-id=0%3A1&starting-point-node-id=24%3A44
 
-Project Files Link: https://www.figma.com/design/CzEo1jVIzXH8DadnHSwzzb/Frontend-UI?node-id=0-1&t=nIUkZCQ61IuXc6PK-1
+**<u>Project Files Link:</u>** https://www.figma.com/design/CzEo1jVIzXH8DadnHSwzzb/Frontend-UI?node-id=0-1&t=nIUkZCQ61IuXc6PK-1
 
-User Experience / User Journey Video: *INSERT VIDEO HERE*
+**<u>User Experience / User Journey Video:</u>** https://www.youtube.com/watch?v=iYwazHIdx7U
 
 ## Architecture 
 
@@ -27,9 +27,19 @@ User Experience / User Journey Video: *INSERT VIDEO HERE*
 
 - To ensure a user does not get stalled when submitting a project for processing, we will have a background worker that processes jobs. Jobs will be stored in MongoDB and processed sequentially by the worker. It will retrieve information from GitHub, Interact with the AI provider and capture screenshots via Playwright. It will save progress and results back into MongoDB and a location for screenshots after processing. This pattern is a ”Producer-Consumer” pattern as one service produces jobs and the background service consumes them to process.
 
+### Why we selected this Architecture
+
+We selected this architecture to ensure the user experience is seamless and does not get stalled from tasks that require lengthy processing. 
+
+- Client/Server architecture separates the react interface from the backend processing, allowing them to work independently through the agreed REST API. 
+
+- Layered Backend separates request handling, application logic and data access. This makes each individual component easier to test and change without affecting the REST API. 
+
+- Producer/Consumer pattern processing moves the heavy processing (Github retrieval, AI requests, screenshot capture) outside the HTTP request scope. This allows users to continue browsing, to create new projects, and close the browser without loosing their work. 
+
 ![Architecture Screenshot](./docs/sprint1-artifacts/arch.png)
 
-### Personas
+## Personas
 
 | Name, Role | Ada — UX/UI Designer - Primary User |
 |---|---|
@@ -86,7 +96,29 @@ Git Gallery is shown as one system in the context diagram. A user (project manag
 
 ## AI Use Statement
 
-In Progress...
+We used multiple AI tools to support brainstorming, prototype examples, create documentation, and review the project for submission. 
+
+| Tool | How it was used |
+|---|---|
+|Figma Make| Brainstormed interface designs and UX elements. Examined how they were built and referenced them when constructing our prototype. Used to learn how to build our prototype and how Figma works. |
+|ChatGPT| Helped us understand how our project could be broken down into different testing categories based on our user scenarios and project requirements. |
+|Codex| Helped explain architectures and their tradeoffs. Converted text and tables into markdown equivalences. Reviewed Readme against sprint1 rubric. |
+
+### Reviews and Edits
+
+We mainly used AI to brainstorm and learn while building up sprint 1. AI would constantly deviate or produce results not aligned with our end goal, so we would pull out the core ideas that we liked and put them into our own words that match our requirements. 
+
+#### Examples:
+
+- During architecture brainstorming the project scope would creep to include things like redis in-memory DBs, or multiple microservices. Instead we pulled out only the things necessary to produce a working prototype. 
+
+- Creating the figma prototype, figma make would be prompted to create UX flows or create UI elements. These elements and UX setups would then be examined to learn how they work and how we could make our own. 
+
+#### Models
+
+Figma Make: auto
+ChatGPT: GPT-6.1 Sol
+Codex: GPT-6 Astra
 
 ## Installation and local setup
 
