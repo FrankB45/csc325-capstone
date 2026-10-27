@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 
 import testImg from './assets/test.jpeg'
 import './App.css'
+import RepositoryValidation from './components/RepositoryValidation'
 
 function App() {
 
@@ -32,6 +33,7 @@ function App() {
         {loading && <p>Loading...</p>}
         <button onClick={fetchHello} disabled={loading}>Fetch Hello Message</button>
       </div>
+      <RepositoryValidation />
 
     </>
   )
