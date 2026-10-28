@@ -17,6 +17,7 @@ body {
 --color-gray-200: #0b2545;
 --color-indigo: #3b0086;
 --color-slategray: #8e6c88;
+--color-lightgray: #cfd2cd;
 
 /* Padding */
 --padding-0: 0px;
