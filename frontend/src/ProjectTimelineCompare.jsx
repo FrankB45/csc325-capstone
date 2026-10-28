@@ -263,7 +263,7 @@ font-family: var(--font-inter);
     		bottom: 0%;
     		left: 0%;
     		border-radius: var(--br-10);
-    		background-color: var(--color-coral);
+    		background-color: var(--color-coral-100);
     		`} />
                 </div>
     		<b className={css`position: absolute;
@@ -316,7 +316,7 @@ font-family: var(--font-inter);
     		bottom: -2.7%;
     		left: -1.53%;
     		border-radius: var(--br-10);
-    		background: #cfd2cd padding-box, linear-gradient(125.53deg, #f7b32b, var(--color-coral)) border-box;
+    		background: #cfd2cd padding-box, var(--gradient-3) border-box;
     		border: 10px solid transparent;
     		box-sizing: border-box;
     		`} />
@@ -369,7 +369,7 @@ font-family: var(--font-inter);
     		top: 0px;
     		left: 0px;
     		font-weight: 600;
-    		background: linear-gradient(91.63deg, #f7b32b, var(--color-coral));
+    		background: var(--gradient-3);
     		-webkit-background-clip: text;
     		-webkit-text-fill-color: transparent;
     		`}>Personal Website</div>
@@ -407,7 +407,7 @@ font-family: var(--font-inter);
     		bottom: 0%;
     		left: 0%;
     		border-radius: var(--br-10);
-    		background-color: var(--color-coral);
+    		background-color: var(--color-coral-100);
     		`} />
                 </div>
     		<b className={css`position: absolute;
@@ -483,7 +483,7 @@ font-family: var(--font-inter);
     		top: 28px;
     		left: 20px;
     		border-radius: 16777200px;
-    		background-color: var(--color-coral);
+    		background-color: var(--color-coral-100);
     		width: 8px;
     		height: 8px;
     		`} />

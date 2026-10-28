@@ -54,7 +54,7 @@ font-family: var(--font-inter);
     		`}>
     		<span className={css`line-height: var(--lh-48);
     		`}>git</span>
-    		<span className={css`color: var(--color-coral-200);
+    		<span className={css`color: var(--color-coral-100);
     		line-height: var(--lh-48);
     		`}>gallery</span>
                 </b>

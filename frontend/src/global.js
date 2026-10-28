@@ -12,7 +12,6 @@ body {
 
 /* Color */
 --color-coral-100: #ff7f51;
---color-coral-200: #e57a44;
 --color-gray-100: #fefeff;
 --color-gray-200: #0b2545;
 --color-gray-400: #767875;
@@ -22,8 +21,8 @@ body {
 --color-firebrick: #ba0202;
 --color-gray-300: rgba(11, 37, 69, 0.5);
 --color-gainsboro: #d9d9d9;
---color-gray-400: rgba(255, 255, 255, 0.4);
---color-gray-500: rgba(255, 255, 255, 0.1);
+--color-gray-500: rgba(255, 255, 255, 0.4);
+--color-gray-600: rgba(255, 255, 255, 0.1);
 --color-slategray-200: rgba(142, 108, 136, 0.8);
 --color-black: #000;
 

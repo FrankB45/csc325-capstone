@@ -94,7 +94,7 @@ font-family: var(--font-dm-sans);
     		align-items: flex-start;
     		padding: var(--padding-12) var(--padding-0) var(--padding-0);
     		font-size: var(--fs-16);
-    		color: var(--color-slategray-100);
+    		color: var(--color-slategray);
     		`}>
     		<div className={css`width: 720px;
     		position: relative;
@@ -186,7 +186,7 @@ font-family: var(--font-dm-sans);
     		padding: var(--padding-8) var(--padding-0) var(--padding-0);
     		box-sizing: border-box;
     		font-size: var(--fs-14);
-    		color: var(--color-slategray-100);
+    		color: var(--color-slategray);
     		`}>
     		<div className={css`width: 339px;
     		position: relative;
@@ -243,7 +243,7 @@ font-family: var(--font-dm-sans);
     		padding: var(--padding-8) var(--padding-0) var(--padding-0);
     		box-sizing: border-box;
     		font-size: var(--fs-14);
-    		color: var(--color-slategray-100);
+    		color: var(--color-slategray);
     		`}>
     		<div className={css`width: 368px;
     		position: relative;
@@ -301,7 +301,7 @@ font-family: var(--font-dm-sans);
     		padding: var(--padding-8) var(--padding-0) var(--padding-0);
     		box-sizing: border-box;
     		font-size: var(--fs-14);
-    		color: var(--color-slategray-100);
+    		color: var(--color-slategray);
     		`}>
     		<div className={css`align-self: stretch;
     		position: relative;
@@ -377,7 +377,7 @@ font-family: var(--font-dm-sans);
     		align-items: flex-start;
     		padding: var(--padding-16) var(--padding-20) var(--padding-20);
     		font-size: var(--fs-14);
-    		color: var(--color-slategray-100);
+    		color: var(--color-slategray);
     		`}>
     		<div className={css`width: var(--width-678);
     		position: relative;
@@ -420,7 +420,7 @@ font-family: var(--font-dm-sans);
     		align-items: flex-start;
     		padding: var(--padding-16) var(--padding-20) var(--padding-20);
     		font-size: var(--fs-14);
-    		color: var(--color-slategray-100);
+    		color: var(--color-slategray);
     		`}>
     		<div className={css`width: var(--width-678);
     		position: relative;
@@ -463,7 +463,7 @@ font-family: var(--font-dm-sans);
     		align-items: flex-start;
     		padding: var(--padding-16) var(--padding-20) var(--padding-20);
     		font-size: var(--fs-14);
-    		color: var(--color-slategray-100);
+    		color: var(--color-slategray);
     		`}>
     		<div className={css`width: var(--width-678);
     		position: relative;
@@ -506,7 +506,7 @@ font-family: var(--font-dm-sans);
     		align-items: flex-start;
     		padding: var(--padding-16) var(--padding-20) var(--padding-20);
     		font-size: var(--fs-14);
-    		color: var(--color-slategray-100);
+    		color: var(--color-slategray);
     		`}>
     		<div className={css`width: var(--width-678);
     		position: relative;
@@ -549,7 +549,7 @@ font-family: var(--font-dm-sans);
     		align-items: flex-start;
     		padding: var(--padding-16) var(--padding-20) var(--padding-20);
     		font-size: var(--fs-14);
-    		color: var(--color-slategray-100);
+    		color: var(--color-slategray);
     		`}>
     		<div className={css`width: var(--width-678);
     		position: relative;
@@ -592,7 +592,7 @@ font-family: var(--font-dm-sans);
     		align-items: flex-start;
     		padding: var(--padding-16) var(--padding-20) var(--padding-20);
     		font-size: var(--fs-14);
-    		color: var(--color-slategray-100);
+    		color: var(--color-slategray);
     		`}>
     		<div className={css`width: var(--width-678);
     		position: relative;
@@ -615,7 +615,7 @@ font-family: var(--font-dm-sans);
     		box-sizing: border-box;
     		flex-shrink: 0;
     		font-size: var(--fs-14);
-    		color: var(--color-slategray-100);
+    		color: var(--color-slategray);
     		`}>
     		<div className={css`align-self: stretch;
     		display: flex;
@@ -652,7 +652,7 @@ font-family: var(--font-dm-sans);
     		<div className={css`align-self: stretch;
     		height: 302px;
     		border-radius: var(--br-16);
-    		background-color: var(--color-slategray-100);
+    		background-color: var(--color-slategray);
     		overflow: hidden;
     		flex-shrink: 0;
     		display: flex;
@@ -660,7 +660,7 @@ font-family: var(--font-dm-sans);
     		align-items: flex-start;
     		`}>
     		<div className={css`align-self: stretch;
-    		border-bottom: 1px solid var(--color-gray-500);
+    		border-bottom: 1px solid var(--color-gray-600);
     		display: flex;
     		align-items: center;
     		padding: 14px var(--padding-20);
@@ -670,7 +670,7 @@ font-family: var(--font-dm-sans);
     		width: 8px;
     		position: relative;
     		border-radius: 16777200px;
-    		background-color: var(--color-coral);
+    		background-color: var(--color-coral-100);
     		opacity: 0.98;
     		`} />
     		<div className={css`display: flex;
@@ -687,7 +687,7 @@ font-family: var(--font-dm-sans);
     		align-items: flex-start;
     		justify-content: flex-end;
     		font-size: var(--fs-12);
-    		color: var(--color-gray-400);
+    		color: var(--color-gray-500);
     		font-family: var(--font-dm-mono);
     		`}>
     		<div className={css`display: flex;
@@ -719,7 +719,7 @@ font-family: var(--font-dm-sans);
     		`}>
     		<div className={css`align-self: stretch;
     		border-radius: var(--br-12) var(--br-12) var(--br-12) 4px;
-    		background-color: var(--color-gray-500);
+    		background-color: var(--color-gray-600);
     		display: flex;
     		flex-direction: column;
     		align-items: flex-start;
@@ -735,7 +735,7 @@ font-family: var(--font-dm-sans);
                         </div>
     		<div className={css`align-self: stretch;
     		height: 93px;
-    		border-top: 1px solid var(--color-gray-500);
+    		border-top: 1px solid var(--color-gray-600);
     		box-sizing: border-box;
     		display: flex;
     		align-items: flex-start;
@@ -763,7 +763,7 @@ font-family: var(--font-dm-sans);
     		<div className={css`height: var(--height-64);
     		width: 272px;
     		border-radius: 10px;
-    		background-color: var(--color-coral);
+    		background-color: var(--color-coral-100);
     		display: flex;
     		flex-direction: column;
     		align-items: center;

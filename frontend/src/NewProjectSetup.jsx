@@ -86,7 +86,7 @@ font-family: var(--font-inter);
     		bottom: 0%;
     		left: 0%;
     		border-radius: var(--br-10);
-    		background-color: var(--color-coral);
+    		background-color: var(--color-coral-100);
     		`} />
                 </div>
     		<b className={css`position: absolute;
@@ -185,7 +185,7 @@ font-family: var(--font-inter);
     		top: 591px;
     		left: 413px;
     		border-radius: var(--br-10);
-    		background: linear-gradient(-44.38deg, var(--color-coral) 0.65%, #f7b32b) border-box;
+    		background: linear-gradient(-44.38deg, var(--color-coral-100) 0.65%, #f7b32b) border-box;
     		border: 10px solid transparent;
     		box-sizing: border-box;
     		width: 613px;

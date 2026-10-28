@@ -323,7 +323,7 @@ font-family: var(--font-inter);
     		top: 0px;
     		left: 0px;
     		border-radius: var(--br-10);
-    		background-color: var(--color-coral);
+    		background-color: var(--color-coral-100);
     		width: 108px;
     		height: 44px;
     		`} />
@@ -357,7 +357,7 @@ font-family: var(--font-inter);
     		top: 0px;
     		left: 0px;
     		font-weight: 600;
-    		background: linear-gradient(91.63deg, #f7b32b, var(--color-coral));
+    		background: var(--gradient-3);
     		-webkit-background-clip: text;
     		-webkit-text-fill-color: transparent;
     		`}>Personal Website</div>
@@ -423,7 +423,7 @@ font-family: var(--font-inter);
     		top: 28px;
     		left: 20px;
     		border-radius: 16777200px;
-    		background-color: var(--color-coral);
+    		background-color: var(--color-coral-100);
     		width: 8px;
     		height: 8px;
     		`} />

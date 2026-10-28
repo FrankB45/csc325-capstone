@@ -130,7 +130,7 @@ font-family: var(--font-inter);
     		bottom: 0%;
     		left: 0%;
     		border-radius: var(--br-10);
-    		background-color: var(--color-coral);
+    		background-color: var(--color-coral-100);
     		`} />
                 </div>
     		<img className={css`position: absolute;
