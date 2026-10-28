@@ -15,6 +15,7 @@ body {
 --color-coral-200: #e57a44;
 --color-gray-100: #fefeff;
 --color-gray-200: #0b2545;
+--color-gray-400: #767875;
 --color-indigo: #3b0086;
 --color-slategray: #8e6c88;
 --color-lightgray: #cfd2cd;
@@ -24,6 +25,7 @@ body {
 --color-gray-400: rgba(255, 255, 255, 0.4);
 --color-gray-500: rgba(255, 255, 255, 0.1);
 --color-slategray-200: rgba(142, 108, 136, 0.8);
+--color-black: #000;
 
 
 /* Gap */
@@ -47,6 +49,7 @@ body {
 --br-10: 10px;
 --br-12: 12px;
 --br-16: 16px;
+--br-50: 50%;
 
 /* Font */
 --font-inter: Inter, Arial, sans-serif;
@@ -81,6 +84,8 @@ body {
 --height-26: 26px;
 --height-32: 32px;
 --width-22: 22px;
+--height-35: 35px;
+--width-35: 35px;
 --height-64: 64px;
 --height-459: 459px;
 --width-14: 14px;
@@ -106,6 +111,8 @@ body {
 --left-50: 50px;
 --top-0: 0px;
 --top-2: 2px;
+--top-805: 805px;
+--top-858: 858px;
 
 }
     
