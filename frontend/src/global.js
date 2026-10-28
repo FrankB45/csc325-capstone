@@ -19,9 +19,13 @@ body {
 --color-slategray: #8e6c88;
 --color-lightgray: #cfd2cd;
 --color-firebrick: #ba0202;
+--color-gray-300: rgba(11, 37, 69, 0.5);
+--color-gainsboro: #d9d9d9;
+
 
 /* Padding */
 --padding-0: 0px;
+--br-5: 5px;
 --padding-12: 12px;
 
 /* BorderRadius */
@@ -41,12 +45,21 @@ body {
 --gradient-1: #d9d9d9 padding-box, linear-gradient(98.52deg, #f7b32b, var(--color-coral-100)) border-box;
 
 /* WidthHeights */
+--height-19: 19px;
+--height-22: 22px;
+--height-24: 24px;
+--width-22: 22px;
 --height-64: 64px;
 --height-459: 459px;
 
 /* LineHeights */
 --lh-20: 20px;
 --lh-48: 48px;
+
+/* Opacities */
+--opacity-0_8: 0.8;
+--left-292: 292px;
+--left-321: 321px;
 
 }
     
