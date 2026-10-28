@@ -39,6 +39,7 @@ body {
 --fs-16: 16px;
 --fs-20: 20px;
 --fs-24: 24px;
+--fs-32: 32px;
 --fs-36: 36px;
 
 /* Gradients */
@@ -58,8 +59,14 @@ body {
 
 /* Opacities */
 --opacity-0_8: 0.8;
+
+
 --left-292: 292px;
 --left-321: 321px;
+--left-0: 0px;
+--left-50: 50px;
+--top-0: 0px;
+--top-2: 2px;
 
 }
     
