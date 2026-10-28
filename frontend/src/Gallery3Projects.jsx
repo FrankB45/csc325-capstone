@@ -100,7 +100,7 @@ font-family: var(--font-inter);
     		top: 393px;
     		left: 40px;
     		border-radius: var(--br-10);
-    		background: linear-gradient(-44.38deg, var(--color-coral) 0.65%, #f7b32b) border-box;
+    		background: var(--gradient-2);
     		border: 10px solid transparent;
     		box-sizing: border-box;
     		width: 440px;
