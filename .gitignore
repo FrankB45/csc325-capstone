@@ -4,3 +4,5 @@ backend/config/__pycache__
 backend/git_gallery_app/__pycache__
 backend/git_gallery_app/migrations/__pycache__
 backend/mongo_migrations/__pycache__
+backend/git_gallery_app/services/__pycache__/__init__.cpython-314.pyc
+backend/git_gallery_app/services/__pycache__/github.cpython-314.pyc

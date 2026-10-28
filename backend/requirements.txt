@@ -1,3 +1,13 @@
+asgiref==3.12.1
+certifi==2026.10.23
+charset-normalizer==3.5.2
+dictlib==1.1.5
 Django==6.0.9
 django-mongodb-backend==6.0.4
 djangorestframework==3.18.3
+dnspython==2.8.0
+idna==3.20
+pymongo==4.18.2
+requests==2.34.2
+sqlparse==0.6.0
+urllib3==2.8.0
