@@ -18,6 +18,7 @@ body {
 --color-indigo: #3b0086;
 --color-slategray: #8e6c88;
 --color-lightgray: #cfd2cd;
+--color-firebrick: #ba0202;
 
 /* Padding */
 --padding-0: 0px;
@@ -32,6 +33,7 @@ body {
 
 /* FontSize */
 --fs-16: 16px;
+--fs-20: 20px;
 --fs-24: 24px;
 --fs-36: 36px;
 
