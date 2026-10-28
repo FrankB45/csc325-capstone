@@ -44,6 +44,8 @@ body {
 
 /* Gradients */
 --gradient-1: #d9d9d9 padding-box, linear-gradient(98.52deg, #f7b32b, var(--color-coral-100)) border-box;
+--gradient-2: linear-gradient(122.33deg, #f7b32b, var(--color-coral)) border-box;
+
 
 /* WidthHeights */
 --height-19: 19px;
