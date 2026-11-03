@@ -3,6 +3,7 @@ from unittest import TestCase
 from unittest.mock import patch
 
 import requests
+from django.test import SimpleTestCase
 
 from .services.github import check_repository_history, get_repository_information
 
@@ -255,3 +256,8 @@ class RepositoryHistoryTests(TestCase):
             "url": self.repo_url,
         })
         self.assertEqual(self.mock_get.call_count, 1)
+
+
+class GitGalleryAppTests(SimpleTestCase):
+    def test_example(self):
+        self.assertTrue(True)
