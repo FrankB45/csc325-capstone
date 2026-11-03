@@ -3,16 +3,22 @@ import styles from "./Header.module.css";
 
 const Header = () => {
   const onInfoIconClick = useCallback(() => {
-    // Add your code here
+    // TO-DO
   }, []);
 
   return (
+    // Header container
     <div className={styles.header}>
-      <img className={styles.infoIcon} alt="" onClick={onInfoIconClick} />
+      {/* GitGallery logo container */}
       <div className={styles.gitgalleryLogo} onClick={onInfoIconClick}>
-        <img className={styles.textIcon} alt="" />
+        {/* GitGallery logo vector*/}
         <img className={styles.vectorIcon} alt="" />
+        {/* GitGallery logo text */}
+        <img className={styles.textIcon} alt="" />
       </div>
+
+      {/* Info icon */}
+      <img className={styles.infoIcon} alt="" onClick={onInfoIconClick} />
     </div>
   );
 };
