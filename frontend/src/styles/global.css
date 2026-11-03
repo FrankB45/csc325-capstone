@@ -1,0 +1,11 @@
+body {
+  margin: 0;
+  line-height: normal;
+}
+:root {
+  /* Common Style Variables */
+
+  /* Color */
+  --color-gray: #0b2545;
+  --color-navy: #0a1a2f;
+}
