@@ -331,3 +331,39 @@ def _list_html_page_paths(owner: str, repo: str, tree_sha: str) -> list[str]:
             html_pages.append(path)
 
     return sorted(html_pages)
+
+
+def get_repository_compatibility_report(repo_url: str) -> dict:
+    """Combine prerequisite results without declaring full compatibility."""
+    history_result = check_repository_history(repo_url)
+    html_result = check_repository_html_pages(repo_url)
+    history_status = history_result.get("history_status")
+    html_status = html_result.get("html_status")
+
+    # A known rejection takes precedence even if the other check is unavailable.
+    if history_status == "rejected" or html_status == "rejected":
+        overall_status = "rejected"
+        reason = "An implemented check found a failed repository prerequisite."
+    elif history_status != "passed" or html_status != "passed":
+        overall_status = "unavailable"
+        reason = "At least one implemented check could not complete reliably."
+    else:
+        overall_status = "pending"
+        reason = (
+            "History and candidate HTML checks passed; "
+            "unsupported-dependency checking is unfinished."
+        )
+
+    return {
+        "overall_status": overall_status,
+        "reason": reason,
+        "history": history_result,
+        "html": html_result,
+        "dependencies": {
+            "status": "pending",
+            "reason": "Unsupported-dependency checking is not implemented.",
+        },
+        "setup_available": False,
+        # Each check resolves the default branch independently.
+        "same_snapshot_guaranteed": False,
+    }
