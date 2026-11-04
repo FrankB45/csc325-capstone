@@ -1,0 +1,36 @@
+@import "../../styles/global.css";
+
+.header {
+  width: 100%;
+  height: 142px;
+  position: relative;
+  background-color: var(--color-navy);
+}
+.infoIcon {
+  position: absolute;
+  top: 46px;
+  right: 60px;
+  width: 53px;
+  height: 53px;
+  cursor: pointer;
+}
+.gitgalleryLogo {
+  position: absolute;
+  top: 48px;
+  left: 63px;
+  width: 200px;
+  height: 51px;
+  cursor: pointer;
+}
+.textIcon {
+  position: absolute;
+  top: 13.9px;
+  left: 57.56px;
+  width: 142.4px;
+  height: 27.5px;
+}
+.vectorIcon {
+  display: block;
+  width: 100%;
+  height: auto;
+}
