@@ -53,4 +53,28 @@ def create_job(
 
     return job
 
+##########
+# Used by background worker
+# Finds the oldest queued job, marks it as processing and returns it
+def claim_next_job() -> Job | None:
+    while True:
+        job = (
+            Job.objects
+            .filter(status=Job.Status.QUEUED)
+            .order_by("created_at", "pk")
+            .first()
+        )
+        if job is None:
+            return None
 
+        updated_count = Job.objects.filter(
+            pk=job.pk,
+            status=Job.Status.QUEUED,
+        ).update(
+            status=Job.Status.PROCESSING,
+            started_at=timezone.now(),
+        )
+        if updated_count == 1:
+            job.refresh_from_db()
+            return job
+        # If the job was not updated, it means another process claimed it
