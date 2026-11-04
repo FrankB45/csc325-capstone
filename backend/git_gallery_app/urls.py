@@ -7,6 +7,7 @@ from .views import (
     project_gallery,
     project_detail,
     project_analyses,
+    check_repository_compatibility,
 )
 
 urlpatterns = [
@@ -18,5 +19,10 @@ urlpatterns = [
         "projects/<str:project_id>/analyses/",
         project_analyses,
         name="project-analyses",
+    ),
+    path(
+        "repo/compatibility/",
+        check_repository_compatibility,
+        name="check-repository-compatibility",
     ),
 ]

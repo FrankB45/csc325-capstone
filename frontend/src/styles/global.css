@@ -1,0 +1,10 @@
+body {
+  margin: 0;
+  line-height: normal;
+}
+:root {
+  /* Common Style Variables */
+
+  /* Color Pallete */
+  --color-navy: #0b2545;
+}

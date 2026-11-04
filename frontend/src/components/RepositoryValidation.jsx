@@ -1,4 +1,5 @@
 import { useState } from "react"
+import RepositoryCompatibilityReport from "./RepositoryCompatibilityReport"
 
 export default function RepositoryValidation({ onProjectCreated }) {
     const [url, setUrl] = useState("")
@@ -7,6 +8,7 @@ export default function RepositoryValidation({ onProjectCreated }) {
     const [isLoading, setIsLoading] = useState(false)
     const [isSaving, setIsSaving] = useState(false)
     const [error, setError] = useState("")
+    const [compatibilityReport, setCompatibilityReport] = useState(null)
 
     async function handleSubmit(event) {
         event.preventDefault();
@@ -144,6 +146,7 @@ export default function RepositoryValidation({ onProjectCreated }) {
                 </form>
                 </section>
             )}
+            <RepositoryCompatibilityReport report={compatibilityReport} />
         </div>
     )
 }
