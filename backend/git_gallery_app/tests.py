@@ -3,7 +3,7 @@ from django.test import SimpleTestCase
 # Create your tests here.
 
 import unittest
-from commit_selection import SelectionError, default_selection, validate_selection
+from .commit_selection import SelectionError, default_selection, validate_selection
 
 
 def shas(n):
