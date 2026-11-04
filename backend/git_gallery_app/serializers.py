@@ -26,13 +26,12 @@ class ProjectCreateSerializer(serializers.Serializer):
             )
         return attributes
 
-    def create(self, validated_data):
-        project, self.created = Project.objects.get_or_create(
-            repository_owner=validated_data["repository_owner"],
-            repository_name=validated_data["repository_name"],
-            defaults=validated_data,
-        )
-        return project
+def create(self, validated_data):
+    project, self.created = Project.objects.get_or_create(
+        repository_url=validated_data["repository_url"],
+        defaults={"name": validated_data["project_name"]},
+    )
+    return project
 
 
 class ProjectStatusSerializer(serializers.Serializer):
