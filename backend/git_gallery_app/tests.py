@@ -8,6 +8,11 @@ from .services.jobs import create_job, claim_next_job
 
 from datetime import timedelta
 
+from unittest.mock import Mock
+
+from .services.processing import process_job
+
+
 
 ##########
 # Tests for the Job functionality
@@ -175,3 +180,60 @@ class JobTests(TransactionTestCase):
             Job.objects.filter(pk=job.pk).update(status=status)
 
         self.assertIsNone(claim_next_job())
+########
+# Tests for processing
+    def test_processing_records_capture_outcomes(self):
+        cases = [
+            (
+                "all succeed",
+                ["first.png", "second.png"],
+                Job.Status.COMPLETE,
+                [Capture.Status.COMPLETE, Capture.Status.COMPLETE],
+            ),
+            (
+                "first fails but second succeeds",
+                [RuntimeError("Page missing"), "second.png"],
+                Job.Status.PARTIALLY_COMPLETE,
+                [Capture.Status.FAILED, Capture.Status.COMPLETE],
+            ),
+            (
+                "all fail",
+                [RuntimeError("Page missing"), RuntimeError("Timeout")],
+                Job.Status.FAILED,
+                [Capture.Status.FAILED, Capture.Status.FAILED],
+            ),
+        ]
+
+        for label, outcomes, expected_job_status, expected_capture_statuses in cases:
+            with self.subTest(case=label):
+                created_job = create_job(
+                    self.snapshot,
+                    "index.html",
+                    self.shas[:2],
+                )
+                claimed_job = claim_next_job()
+
+                fake_capture = Mock(side_effect=outcomes)
+
+                process_job(claimed_job, fake_capture)
+
+                saved_job = Job.objects.get(pk=created_job.pk)
+
+                self.assertEqual(saved_job.status, expected_job_status)
+                self.assertIsNotNone(saved_job.completed_at)
+                self.assertEqual(fake_capture.call_count, 2)
+
+                self.assertEqual(
+                    [capture.status for capture in saved_job.captures],
+                    expected_capture_statuses,
+                )
+
+                for capture, outcome in zip(saved_job.captures, outcomes):
+                    self.assertIsNotNone(capture.completed_at)
+
+                    if isinstance(outcome, Exception):
+                        self.assertEqual(capture.error_message, str(outcome))
+                        self.assertEqual(capture.screenshot_path, "")
+                    else:
+                        self.assertEqual(capture.screenshot_path, outcome)
+                        self.assertEqual(capture.error_message, "")
