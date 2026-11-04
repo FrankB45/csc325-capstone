@@ -1,7 +1,7 @@
 # Add API routes here. They are served under /api/.
 
 from django.urls import path
-from .views import hello_world, get_repository
+from .views import hello_world, get_repository, get_commits, create_analysis
 
 urlpatterns = [
     path("hello/", hello_world, name="hello-world"),
