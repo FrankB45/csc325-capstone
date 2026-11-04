@@ -1,7 +1,17 @@
+from datetime import datetime, timezone
+from uuid import uuid4
+
+from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 import requests
+from .models import Project
+from .serializers import (
+    ProjectCreateSerializer,
+    ProjectStatusSerializer,
+    SavedAnalysisSerializer,
+)
 from .services.github import get_repository_information
 
 
@@ -49,4 +59,95 @@ def get_repository(request):
 
     return Response(repository)
 
-    
+
+def serialize_project(project):
+    return {
+        "id": str(project.pk),
+        "project_name": project.project_name,
+        "repository_owner": project.repository_owner,
+        "repository_name": project.repository_name,
+        "repository_url": project.repository_url,
+        "analysis_status": project.analysis_status,
+        "processed_versions": project.processed_versions,
+        "total_versions": project.total_versions,
+        "saved_analysis_count": len(project.saved_analyses or []),
+        "created_at": project.created_at.isoformat(),
+        "updated_at": project.updated_at.isoformat(),
+    }
+
+
+@api_view(["GET", "POST"])
+def project_gallery(request):
+    if request.method == "GET":
+        projects = list(Project.objects.all())
+        return Response({
+            "projects": [serialize_project(project) for project in projects],
+            "count": len(projects),
+        })
+
+    serializer = ProjectCreateSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(
+            {"error": "Project details are invalid.", "details": serializer.errors},
+            status=400,
+        )
+
+    project = serializer.save()
+    return Response(
+        serialize_project(project),
+        status=201 if serializer.created else 200,
+    )
+
+
+@api_view(["GET", "PATCH"])
+def project_detail(request, project_id):
+    project = get_object_or_404(Project, pk=project_id)
+
+    if request.method == "GET":
+        return Response(serialize_project(project))
+
+    serializer = ProjectStatusSerializer(
+        project,
+        data=request.data,
+        partial=True,
+        context={"project": project},
+    )
+    if not serializer.is_valid():
+        return Response(
+            {"error": "Project status is invalid.", "details": serializer.errors},
+            status=400,
+        )
+
+    return Response(serialize_project(serializer.save()))
+
+
+@api_view(["GET", "POST"])
+def project_analyses(request, project_id):
+    project = get_object_or_404(Project, pk=project_id)
+
+    if request.method == "GET":
+        saved_analyses = project.saved_analyses or []
+        return Response({
+            "analyses": saved_analyses,
+            "count": len(saved_analyses),
+        })
+
+    serializer = SavedAnalysisSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(
+            {"error": "Saved analysis is invalid.", "details": serializer.errors},
+            status=400,
+        )
+
+    analysis = {
+        "id": str(uuid4()),
+        **serializer.validated_data,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    project.saved_analyses = [*(project.saved_analyses or []), analysis]
+    project.analysis_status = analysis["analysis_status"]
+    project.processed_versions = analysis["processed_versions"]
+    project.total_versions = analysis["total_versions"]
+    project.save()
+
+    return Response(analysis, status=201)
