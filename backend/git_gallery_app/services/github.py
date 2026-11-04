@@ -52,6 +52,45 @@ def get_repository_information(repo_url: str) -> dict:
     }
 
 
+def get_commit_history(repo_url: str) -> list[dict]:
+    """Commits on the default branch, ordered oldest -> newest.
+
+    Each item: {"sha": <full 40-char sha>, "message": <first line>, "date": <ISO str>}.
+    Raises ValueError if the repository has no commits or more than 50
+    (the supported range), and requests exceptions on GitHub failures.
+    """
+    owner, repo = parse_github_url(repo_url)
+
+    response = requests.get(
+        f"https://api.github.com/repos/{owner}/{repo}/commits",
+        headers={"Accept": "application/vnd.github+json"},
+        # One extra so we can tell "exactly 50" from "more than 50".
+        params={"per_page": MAX_HISTORY_COMMITS + 1},
+        timeout=10,
+    )
+
+    if response.status_code == 409:  # GitHub: "Git Repository is empty."
+        raise ValueError("Repository has no commits.")
+    response.raise_for_status()
+    items = response.json()
+
+    if not items:
+        raise ValueError("Repository has no commits.")
+    if len(items) > MAX_HISTORY_COMMITS:
+        raise ValueError(
+            f"Repository has more than {MAX_HISTORY_COMMITS} commits, which is not supported."
+        )
+
+    # GitHub returns newest first; the app works oldest -> newest.
+    return [
+        {
+            "sha": item["sha"],
+            "message": item["commit"]["message"].splitlines()[0] if item["commit"]["message"] else "",
+            "date": item["commit"]["author"]["date"],
+        }
+        for item in reversed(items)
+    ]
+
 def check_repository_history(repo_url: str) -> dict:
     """Check history only; HTML-page and dependency checks are still required."""
     checking_commits = False
