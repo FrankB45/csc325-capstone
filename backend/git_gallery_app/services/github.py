@@ -40,7 +40,16 @@ def get_repository_information(repo_url: str) -> dict:
         timeout=10,
     )
 
-    MAX_SUPPORTED_COMMITS = 50
+    response.raise_for_status()
+    data = response.json()
+
+    return {
+        "name": data["name"],
+        "full_name": data["full_name"],
+        "description": data["description"],
+        "default_branch": data["default_branch"],
+        "url": data["html_url"],
+    }
 
 
 def get_commit_history(repo_url: str) -> list[dict]:
@@ -56,7 +65,7 @@ def get_commit_history(repo_url: str) -> list[dict]:
         f"https://api.github.com/repos/{owner}/{repo}/commits",
         headers={"Accept": "application/vnd.github+json"},
         # One extra so we can tell "exactly 50" from "more than 50".
-        params={"per_page": MAX_SUPPORTED_COMMITS + 1},
+        params={"per_page": MAX_HISTORY_COMMITS + 1},
         timeout=10,
     )
 
@@ -67,9 +76,9 @@ def get_commit_history(repo_url: str) -> list[dict]:
 
     if not items:
         raise ValueError("Repository has no commits.")
-    if len(items) > MAX_SUPPORTED_COMMITS:
+    if len(items) > MAX_HISTORY_COMMITS:
         raise ValueError(
-            f"Repository has more than {MAX_SUPPORTED_COMMITS} commits, which is not supported."
+            f"Repository has more than {MAX_HISTORY_COMMITS} commits, which is not supported."
         )
 
     # GitHub returns newest first; the app works oldest -> newest.
@@ -81,18 +90,6 @@ def get_commit_history(repo_url: str) -> list[dict]:
         }
         for item in reversed(items)
     ]
-
-    response.raise_for_status()
-    data = response.json()
-
-    return {
-        "name": data["name"],
-        "full_name": data["full_name"],
-        "description": data["description"],
-        "default_branch": data["default_branch"],
-        "url": data["html_url"],
-    }
-
 
 def check_repository_history(repo_url: str) -> dict:
     """Check history only; HTML-page and dependency checks are still required."""
