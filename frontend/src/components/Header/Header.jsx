@@ -1,5 +1,7 @@
 import { useCallback } from "react";
 import styles from "./Header.module.css";
+import logoIcon from "../../assets/GitGallery Logo.svg";
+import infoIcon from "../../assets/Info Icon.svg";
 
 const Header = () => {
   const onInfoIconClick = useCallback(() => {
@@ -12,13 +14,20 @@ const Header = () => {
       {/* GitGallery logo container */}
       <div className={styles.gitgalleryLogo} onClick={onInfoIconClick}>
         {/* GitGallery logo vector*/}
-        <img className={styles.vectorIcon} alt="" />
-        {/* GitGallery logo text */}
-        <img className={styles.textIcon} alt="" />
+        <img
+          className={styles.vectorIcon}
+          alt="GitGallery Logo Icon"
+          src={logoIcon}
+        />
       </div>
 
       {/* Info icon */}
-      <img className={styles.infoIcon} alt="" onClick={onInfoIconClick} />
+      <img
+        className={styles.infoIcon}
+        alt="Info"
+        src={infoIcon}
+        onClick={onInfoIconClick}
+      />
     </div>
   );
 };

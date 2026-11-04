@@ -1,7 +1,7 @@
-import Header from "../components/Header.jsx";
+import Header from "../components/Header/Header.jsx";
 
 function Home() {
-  return <Header></Header>;
+  return <Header />;
 }
 
 export default Home;
