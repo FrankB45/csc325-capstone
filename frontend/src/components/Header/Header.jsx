@@ -6,6 +6,9 @@ import infoIcon from "../../assets/Info Icon.svg";
 
 const Header = () => {
   const navigate = useNavigate();
+  const onLogoClick = useCallback(() => {
+    navigate("/");
+  }, [navigate]);
   const onInfoIconClick = useCallback(() => {
     navigate("/info");
   }, [navigate]);
@@ -18,6 +21,7 @@ const Header = () => {
         className={styles.gitgalleryLogo}
         alt="GitGallery Logo Icon"
         src={logoIcon}
+        onClick={onLogoClick}
       />
 
       {/* Info icon */}
