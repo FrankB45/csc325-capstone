@@ -6,5 +6,10 @@ body {
   /* Common Style Variables */
 
   /* Color Pallete */
+  --color-white: #f3f3ff;
   --color-navy: #0b2545;
+  --color-coral: #ff7551;
+  --color-light-coral: #ff9974;
+  --color-purple: #8e6c88;
+  --color-light-purple: #a589a0;
 }
