@@ -12,12 +12,12 @@ const FEATURES = [
     text: "AI groups commits into milestones, highlights what changed visually, and explains each change in plain language.",
   },
 ];
-  
+
 function Home() {
   return (
     <PageLayout>
       <div className="hero">
-        <h1 className="wordmark">GitVisual</h1>
+        <h1 className="wordmark">GitGallery</h1>
         <p className="tagline">The visual way to explore your Git history</p>
         <div className="actions">
           <NewProjectButton />
@@ -37,4 +37,3 @@ function Home() {
 }
 
 export default Home;
-

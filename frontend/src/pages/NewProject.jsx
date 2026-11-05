@@ -1,8 +1,9 @@
 import { useCallback } from "react";
-import Header from "../components/Header/Header.jsx";
+import PageLayout from "../components/PageLayout/PageLayout.jsx";
+/* import RepositoryValidation from "../components/Repository Validation/RepositoryValidation.jsx"; */
 
 function NewProject() {
-  return <Header />;
+  return <PageLayout></PageLayout>;
 }
 
 export default NewProject;
