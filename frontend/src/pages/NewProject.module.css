@@ -1,0 +1,22 @@
+.title { margin: 0 0 48px; text-align: center; font-size: clamp(32px, 4vw, 48px); font-weight: 600; }
+.form { display: flex; flex-direction: column; gap: 32px; }
+.field { display: flex; flex-direction: column; gap: 8px; }
+.label { font-size: 24px; font-weight: 600; }
+.input {
+  height: 40px;
+  padding: 0 12px;
+  border: 0.5px solid var(--color-navy);
+  border-radius: var(--radius-sm);
+  background: var(--color-lightgray);
+  font: inherit;
+  font-size: 20px;
+  color: var(--color-navy);
+}
+.input::placeholder { color: var(--color-gray); }
+.inputInvalid { border-color: var(--color-error); border-width: 2px; }
+.readonly { margin: 0; font-size: 20px; word-break: break-all; }
+.error { margin: 0; color: var(--color-error); font-weight: 700; }
+.actions { display: flex; flex-direction: column; align-items: center; gap: 16px; margin-top: 16px; }
+
+.creating { display: flex; flex-direction: column; align-items: center; gap: 24px; padding-top: 12vh; color: var(--color-navy); }
+.creatingTitle { margin: 0; font-size: clamp(28px, 4vw, 36px); }

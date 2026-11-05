@@ -1,5 +1,5 @@
 import PageLayout from "../components/PageLayout/PageLayout.jsx";
-import Button from "../components/Button/Button.jsx";
+import Button from "../components/NewProjectButton/NewProjectButton.jsx";
 import ProjectCard, { ProjectCardSkeleton } from "../components/ProjectCard/ProjectCard.jsx";
 import { useProjects } from "../hooks/useProjects.js";
 import styles from "./Gallery.module.css";
@@ -11,7 +11,7 @@ const Gallery = () => {
     <PageLayout width="wide">
       <div className={styles.top}>
         <h1 className={styles.title}>Gallery</h1>
-        <Button to="/new-project" size="sm">New Project</Button>
+        <NewProjectButton to="/new-project" size="sm">New Project</NewProjectButton>
       </div>
 
       {error && <p role="alert" className={styles.error}>{error}</p>}
