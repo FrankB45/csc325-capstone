@@ -1,0 +1,15 @@
+.hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px; }
+.wordmark { margin: 0; font-family: var(--font-mono); font-size: clamp(48px, 9vw, 96px); letter-spacing: -1.2px; color: var(--color-indigo); }
+.accent { color: var(--color-coral); }
+.tagline { margin: 0 0 24px; font-size: clamp(18px, 2vw, 24px); color: var(--color-purple); }
+.actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; }
+
+.features { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 32px; margin-top: clamp(48px, 8vw, 96px); }
+.feature {
+  padding: 40px;
+  border: 5px solid transparent;
+  border-radius: 69px;
+  background: #d9d9d9 padding-box, var(--gradient-border) border-box;
+}
+.featureTitle { margin: 0 0 12px; font-family: var(--font-mono); font-size: 20px; }
+.featureText { margin: 0; font-size: 16px; line-height: 1.5; color: var(--color-purple); }
