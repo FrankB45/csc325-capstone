@@ -178,12 +178,18 @@ class RepositoryCompatibilityApiTests(APISimpleTestCase):
         )
         self.assertEqual(response.json()["dependencies"]["tree_sha"], "a" * 40)
 
-    def test_passive_profile_pass_returns_pending_200_without_enabling_setup(self):
+    def test_accepted_report_returns_200_with_setup_available(self):
+        self.report["overall_status"] = "accepted"
+        self.report["setup_available"] = True
         self.report["dependencies"]["status"] = "passed"
         self.report["dependencies"]["reason"] = (
             "The homepage conforms to the bounded passive profile; screenshot success is unverified."
         )
-        self.report["reason"] = "Multiple-independent-website detection remains unfinished."
+        self.report["reason"] = (
+            "The repository meets the limited supported-site profile for entering project setup. "
+            "This does not guarantee screenshot success or complete dependency detection. "
+            "Multiple-independent-website detection is deferred from this MVP setup gate."
+        )
         original_report = deepcopy(self.report)
 
         response = self.client.post(self.endpoint, {"url": self.repo_url}, format="json")
@@ -192,9 +198,10 @@ class RepositoryCompatibilityApiTests(APISimpleTestCase):
         self.assertEqual(response.json(), original_report)
         self.assertEqual(self.report, original_report)
         self.assertEqual(response.json()["dependencies"]["status"], "passed")
-        self.assertEqual(response.json()["overall_status"], "pending")
-        self.assertIs(response.json()["setup_available"], False)
+        self.assertEqual(response.json()["overall_status"], "accepted")
+        self.assertIs(response.json()["setup_available"], True)
         self.assertIs(response.json()["same_snapshot_guaranteed"], False)
+        self.mock_report.assert_called_once_with(self.repo_url)
 
     def test_non_object_json_is_rejected_before_calling_service(self):
         for body in ("[]", '"a string"', "null", "123", "true"):

@@ -82,7 +82,7 @@ class RepositoryCompatibilityReportTests(TestCase):
             ("unavailable", "passed", "unavailable", "unavailable"),
             ("unavailable", "rejected", "unavailable", "rejected"),
             ("unavailable", "unavailable", "unavailable", "unavailable"),
-            ("passed", "passed", "passed", "pending"),
+            ("passed", "passed", "passed", "accepted"),
             ("passed", "rejected", "passed", "rejected"),
             ("passed", "unavailable", "passed", "unavailable"),
             ("rejected", "passed", "passed", "rejected"),
@@ -91,6 +91,14 @@ class RepositoryCompatibilityReportTests(TestCase):
             ("unavailable", "passed", "passed", "unavailable"),
             ("unavailable", "rejected", "passed", "rejected"),
             ("unavailable", "unavailable", "passed", "unavailable"),
+            ("pending", "passed", "passed", "pending"),
+            ("passed", "pending", "passed", "pending"),
+            ("pending", "pending", "pending", "pending"),
+            ("pending", "unavailable", "passed", "unavailable"),
+            ("passed", "pending", "unavailable", "unavailable"),
+            ("rejected", "pending", "passed", "rejected"),
+            ("pending", "rejected", "passed", "rejected"),
+            ("pending", "passed", "unknown", "unavailable"),
         )
         for history_status, html_status, dependency_status, expected_status in cases:
             with self.subTest(
@@ -109,7 +117,10 @@ class RepositoryCompatibilityReportTests(TestCase):
 
                 self.assertEqual(report["overall_status"], expected_status)
                 self.assertTrue(report["reason"])
-                self.assertIs(report["setup_available"], False)
+                if expected_status == "accepted":
+                    self.assertIs(report["setup_available"], True)
+                else:
+                    self.assertIs(report["setup_available"], False)
                 self.assertIs(report["same_snapshot_guaranteed"], False)
                 self.mock_history_check.assert_called_once_with(self.repo_url)
                 self.mock_html_check.assert_called_once_with(self.repo_url)
@@ -214,6 +225,8 @@ class RepositoryCompatibilityReportTests(TestCase):
         self.assertEqual(report["dependencies"]["tree_sha"], self.dependency_result["tree_sha"])
 
     def test_missing_or_unknown_status_is_unavailable(self):
+        # Otherwise every check passes, so each invalid status must block setup itself.
+        self.dependency_result["dependency_status"] = "passed"
         cases = (
             ({"reason": "Missing history status."}, self.html_result, self.dependency_result),
             ({"history_status": None}, self.html_result, self.dependency_result),
@@ -240,6 +253,8 @@ class RepositoryCompatibilityReportTests(TestCase):
                 report = get_repository_compatibility_report(self.repo_url)
 
                 self.assertEqual(report["overall_status"], "unavailable")
+                self.assertIs(report["setup_available"], False)
+                self.assertIs(report["same_snapshot_guaranteed"], False)
 
     def test_known_rejection_takes_precedence_over_unknown_statuses(self):
         cases = (
@@ -260,26 +275,38 @@ class RepositoryCompatibilityReportTests(TestCase):
                 report = get_repository_compatibility_report(self.repo_url)
 
                 self.assertEqual(report["overall_status"], "rejected")
+                self.assertIs(report["setup_available"], False)
 
     def test_report_does_not_claim_a_shared_snapshot(self):
         report = get_repository_compatibility_report(self.repo_url)
 
         self.assertIs(report["same_snapshot_guaranteed"], False)
 
-    def test_passive_profile_pass_still_blocks_overall_acceptance(self):
+    def test_explicit_passes_make_setup_available_under_the_limited_profile(self):
         self.dependency_result["dependency_status"] = "passed"
         self.dependency_result["reason"] = "The homepage conforms to the bounded passive profile."
         self.dependency_result["evidence_paths"] = ["INDEX.HTML", "css/site.css", "images/logo.png"]
+        original_history = deepcopy(self.history_result)
+        original_html = deepcopy(self.html_result)
         original_dependencies = deepcopy(self.dependency_result)
 
         report = get_repository_compatibility_report(self.repo_url)
 
-        self.assertEqual(report["overall_status"], "pending")
-        self.assertIn("Multiple-independent-website detection remains unfinished", report["reason"])
+        self.assertEqual(report["overall_status"], "accepted")
+        self.assertIn("limited supported-site profile for entering project setup", report["reason"])
+        self.assertIn("does not guarantee screenshot success or complete dependency detection", report["reason"])
+        self.assertIn("Multiple-independent-website detection is deferred", report["reason"])
+        self.assertEqual(report["history"], original_history)
+        self.assertEqual(report["html"], original_html)
+        self.assertEqual(self.history_result, original_history)
+        self.assertEqual(self.html_result, original_html)
         self.assertEqual(report["dependencies"]["status"], "passed")
         self.assertEqual(report["dependencies"]["reason"], original_dependencies["reason"])
         self.assertEqual(report["dependencies"]["evidence_paths"], original_dependencies["evidence_paths"])
         self.assertEqual(report["dependencies"]["tree_sha"], original_dependencies["tree_sha"])
         self.assertEqual(self.dependency_result, original_dependencies)
-        self.assertIs(report["setup_available"], False)
+        self.assertIs(report["setup_available"], True)
         self.assertIs(report["same_snapshot_guaranteed"], False)
+        self.mock_history_check.assert_called_once_with(self.repo_url)
+        self.mock_html_check.assert_called_once_with(self.repo_url)
+        self.mock_dependency_check.assert_called_once_with(self.repo_url)

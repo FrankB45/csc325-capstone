@@ -386,7 +386,7 @@ def _list_html_page_paths(owner: str, repo: str, tree_sha: str) -> list[str]:
 
 
 def get_repository_compatibility_report(repo_url: str) -> dict:
-    """Combine prerequisite results without declaring full compatibility."""
+    """Combine checks to decide availability of setup under the limited MVP profile."""
     # Import here because the dependency service reuses this module's GitHub helpers.
     from .dependencies import check_repository_dependencies
 
@@ -398,8 +398,9 @@ def get_repository_compatibility_report(repo_url: str) -> dict:
     dependencies = dependency_result.copy()
     dependency_status = dependencies.pop("dependency_status", None)
     dependencies["status"] = dependency_status
+    setup_available = False
 
-    # A known rejection takes precedence even if the other check is unavailable.
+    # A known rejection takes precedence even if another check is unavailable.
     if (
         history_status == "rejected"
         or html_status == "rejected"
@@ -408,24 +409,27 @@ def get_repository_compatibility_report(repo_url: str) -> dict:
         overall_status = "rejected"
         reason = "An implemented check found a failed repository prerequisite."
     elif (
-        history_status != "passed"
-        or html_status != "passed"
+        history_status not in ("passed", "pending")
+        or html_status not in ("passed", "pending")
         or dependency_status not in ("pending", "passed")
     ):
         overall_status = "unavailable"
         reason = "At least one implemented check could not complete reliably."
-    else:
+    elif (
+        history_status == "pending"
+        or html_status == "pending"
+        or dependency_status == "pending"
+    ):
         overall_status = "pending"
-        if dependency_status == "passed":
-            reason = (
-                "The implemented checks passed their limited profiles; full compatibility "
-                "is still pending. Multiple-independent-website detection remains unfinished."
-            )
-        else:
-            reason = (
-                "History and candidate HTML checks passed; "
-                "unsupported-dependency checking is unfinished."
-            )
+        reason = "At least one compatibility check remains unfinished."
+    else:
+        overall_status = "accepted"
+        setup_available = True
+        reason = (
+            "The repository meets the limited supported-site profile for entering project setup. "
+            "This does not guarantee screenshot success or complete dependency detection. "
+            "Multiple-independent-website detection is deferred from this MVP setup gate."
+        )
 
     return {
         "overall_status": overall_status,
@@ -433,7 +437,7 @@ def get_repository_compatibility_report(repo_url: str) -> dict:
         "history": history_result,
         "html": html_result,
         "dependencies": dependencies,
-        "setup_available": False,
+        "setup_available": setup_available,
         # Each check resolves the default branch independently.
         "same_snapshot_guaranteed": False,
     }
