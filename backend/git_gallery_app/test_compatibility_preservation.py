@@ -108,7 +108,7 @@ class CompatibilityRecheckPreservationTests(APITransactionTestCase):
                 "tree_sha": self.tree_sha,
             },
         )
-        dependency_patch.start()
+        self.mock_dependency_check = dependency_patch.start()
         self.addCleanup(dependency_patch.stop)
 
     def make_github_response(self, data):
@@ -158,8 +158,25 @@ class CompatibilityRecheckPreservationTests(APITransactionTestCase):
                     "(filename matching ignores case)."
                 ),
             },
+            {
+                "name": "required startup package cannot be resolved",
+                "history_responses": [
+                    self.make_github_response([{"sha": self.commit_sha}]),
+                ],
+                "tree_entries": [
+                    {"path": "index.html", "type": "blob", "mode": "100644"},
+                ],
+                "rejected_check": "dependencies",
+                "status_field": "status",
+                "reason": (
+                    "Homepage 'index.html' requires startup file 'src/main.js', which "
+                    "imports package 'react-dom/client' without a browser import map. Ordinary static "
+                    "hosting does not provide the module resolution this startup import needs."
+                ),
+            },
         ]
 
+        pending_dependency_result = self.mock_dependency_check.return_value
         for rejection_case in rejection_cases:
             with self.subTest(rejection=rejection_case["name"]):
                 responses = [self.make_github_response(self.repository_data)]
@@ -178,6 +195,18 @@ class CompatibilityRecheckPreservationTests(APITransactionTestCase):
                 self.mock_get.reset_mock()
                 self.mock_get.side_effect = responses
 
+                # Reset the controlled result for each case; the detector has its own tests.
+                dependency_result = pending_dependency_result.copy()
+                if rejection_case["rejected_check"] == "dependencies":
+                    dependency_result = {
+                        "dependency_status": "rejected",
+                        "reason": rejection_case["reason"],
+                        "evidence_paths": ["index.html", "src/main.js"],
+                        "tree_sha": self.tree_sha,
+                    }
+                self.mock_dependency_check.reset_mock()
+                self.mock_dependency_check.return_value = dependency_result
+
                 response = self.client.post(
                     reverse("check-repository-compatibility"),
                     {"url": self.repo_url},
@@ -193,14 +222,25 @@ class CompatibilityRecheckPreservationTests(APITransactionTestCase):
                 )
                 self.assertEqual(rejected_result["reason"], rejection_case["reason"])
                 self.assertIs(report["setup_available"], False)
-                self.assertEqual(report["dependencies"]["status"], "pending")
+                self.assertEqual(
+                    report["dependencies"]["status"], dependency_result["dependency_status"]
+                )
+                self.assertEqual(report["dependencies"]["reason"], dependency_result["reason"])
+                self.assertEqual(
+                    report["dependencies"]["evidence_paths"], dependency_result["evidence_paths"]
+                )
+                self.assertEqual(report["dependencies"]["tree_sha"], self.tree_sha)
+                self.mock_dependency_check.assert_called_once_with(self.repo_url)
                 self.assertEqual(self.mock_get.call_count, len(responses))
 
                 if rejection_case["rejected_check"] == "history":
                     self.assertEqual(report["html"]["html_status"], "passed")
-                else:
+                elif rejection_case["rejected_check"] == "html":
                     self.assertEqual(report["history"]["history_status"], "passed")
                     self.assertEqual(report["html"]["html_pages"], ["pages/About.HTM"])
+                else:
+                    self.assertEqual(report["history"]["history_status"], "passed")
+                    self.assertEqual(report["html"]["html_status"], "passed")
 
                 # Full document equality includes IDs, links, timestamps and captures.
                 for collection_name, saved_document in self.saved_documents.items():
