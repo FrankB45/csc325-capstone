@@ -252,7 +252,7 @@ class _HomepageParser(HTMLParser):
 
 
 def check_repository_dependencies(repo_url: str) -> dict:
-    """Check a limited passive profile and the existing unsupported startup rule."""
+    """Check the proposed declaration contract, passive profile and startup rule."""
     result = {
         "dependency_status": "pending",
         "reason": "This limited check has not established an unsupported dependency.",
@@ -291,15 +291,21 @@ def check_repository_dependencies(repo_url: str) -> dict:
         homepage_path = homepage_paths[0]
         result["evidence_paths"] = [homepage_path]
         budget = {"content_bytes": 0, "download_bytes": 0, "limit_reason": ""}
+        declaration_result = _check_backend_declaration(owner, repo, files, tree_sha, budget)
+        if declaration_result is not None:
+            if declaration_result["dependency_status"] == "rejected" or budget["limit_reason"]:
+                return declaration_result
         homepage_text = _read_snapshot_text(owner, repo, files[homepage_path], budget)
         if homepage_text is None:
             result["reason"] = budget["limit_reason"]
             return result
-        profile_result = _check_static_homepage_profile(
-            owner, repo, files, homepage_path, homepage_text, tree_sha, budget
-        )
-        if profile_result is not None:
-            return profile_result
+        # An uncertain declaration blocks passing, but must not hide a known rejection.
+        if declaration_result is None:
+            profile_result = _check_static_homepage_profile(
+                owner, repo, files, homepage_path, homepage_text, tree_sha, budget
+            )
+            if profile_result is not None:
+                return profile_result
         homepage = _HomepageParser()
         try:
             homepage.feed(homepage_text)
@@ -315,6 +321,8 @@ def check_repository_dependencies(repo_url: str) -> dict:
             or not required_tags.issubset(homepage.seen_tags)
             or not homepage.startup_source
         ):
+            if declaration_result is not None:
+                return declaration_result
             result["reason"] = (
                 "The homepage has content, styling, scripts or markup outside the "
                 "limited empty-page startup rule. Its dependency requirements remain pending."
@@ -360,6 +368,8 @@ def check_repository_dependencies(repo_url: str) -> dict:
             return result
         package = _find_unresolved_startup_import(startup_text)
         if package is None:
+            if declaration_result is not None:
+                return declaration_result
             result["reason"] = (
                 "The startup file does not begin with a recognized bare-package import. "
                 "Other dependency requirements have not been ruled out."
@@ -384,6 +394,87 @@ def check_repository_dependencies(repo_url: str) -> dict:
         result["dependency_status"] = "unavailable"
         result["reason"] = "GitHub returned malformed or incomplete snapshot data. Try again."
         return result
+
+
+def _check_backend_declaration(owner, repo, files, tree_sha, budget):
+    """Read an optional proposed MVP contract for team review, not a project requirement.
+
+    A regular root git-gallery.json may declare initial_appearance_requires_backend
+    and backend_runtime. True requires a runtime name. False or absence supplies no
+    passing result. This checks declared requirements, not undeclared backend usage.
+    """
+    declaration_path = "git-gallery.json"
+    if declaration_path not in files:
+        return None
+    result = {
+        "dependency_status": "pending",
+        "reason": "",
+        "evidence_paths": [declaration_path],
+        "tree_sha": tree_sha,
+    }
+    try:
+        declaration_text = _read_snapshot_text(owner, repo, files[declaration_path], budget)
+    except UnicodeDecodeError:
+        result["reason"] = "git-gallery.json is not UTF-8 text; dependency checking remains pending."
+        return result
+    if declaration_text is None:
+        result["reason"] = f"git-gallery.json could not be fully inspected: {budget['limit_reason']}"
+        return result
+    try:
+        declaration = json.loads(declaration_text, object_pairs_hook=_unique_declaration_fields)
+    except ValueError:
+        result["reason"] = (
+            "git-gallery.json contains malformed JSON or duplicate fields; "
+            "dependency checking remains pending."
+        )
+        return result
+    if not isinstance(declaration, dict):
+        result["reason"] = "git-gallery.json must contain a JSON object; dependency checking remains pending."
+        return result
+    for field in declaration:
+        if field not in ("initial_appearance_requires_backend", "backend_runtime"):
+            result["reason"] = "git-gallery.json contains unrecognized fields; dependency checking remains pending."
+            return result
+    required = declaration.get("initial_appearance_requires_backend")
+    if type(required) is not bool:
+        result["reason"] = (
+            "git-gallery.json must set initial_appearance_requires_backend to true or false; "
+            "dependency checking remains pending."
+        )
+        return result
+    runtime = declaration.get("backend_runtime")
+    if "backend_runtime" in declaration:
+        if not isinstance(runtime, str) or not runtime.strip() or not runtime.isprintable():
+            result["reason"] = (
+                "git-gallery.json must give backend_runtime as a nonblank, single-line name; "
+                "dependency checking remains pending."
+            )
+            return result
+        runtime = runtime.strip()
+    if required is False:
+        return None
+    if runtime is None:
+        result["reason"] = (
+            "git-gallery.json declares a required initial backend but omits backend_runtime; "
+            "dependency checking remains pending."
+        )
+        return result
+    result["dependency_status"] = "rejected"
+    result["reason"] = (
+        f"git-gallery.json declares that {runtime} is required for the homepage's initial appearance. "
+        "Application backends are unsupported."
+    )
+    return result
+
+
+def _unique_declaration_fields(pairs):
+    """Prevent duplicate JSON fields from silently replacing conflicting declarations."""
+    fields = {}
+    for name, value in pairs:
+        if name in fields:
+            raise ValueError("Duplicate declaration field.")
+        fields[name] = value
+    return fields
 
 
 def _get_snapshot_files(owner: str, repo: str, tree_sha: str) -> dict:

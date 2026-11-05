@@ -5,6 +5,8 @@ from unittest import TestCase
 from unittest.mock import patch
 
 import requests
+from django.urls import reverse
+from rest_framework.test import APIClient
 
 from .services.dependencies import (
     _check_image_signature,
@@ -114,6 +116,18 @@ class RepositoryDependencyTests(TestCase):
             self.make_blob_response(homepage, self.homepage_sha),
         ]
         responses.extend(resource_responses)
+        return responses
+
+    def make_declaration_responses(self, declaration_content, homepage=None, startup_text=None):
+        """Reuse the fixed-snapshot fixture with declaration retrieval before the homepage."""
+        if homepage is None:
+            homepage = self.static_homepage
+        resources = [("git-gallery.json", declaration_content)]
+        if startup_text is not None:
+            resources.append(("src/main.js", startup_text))
+        responses = self.make_static_responses(homepage, resources)
+        declaration_response = responses.pop(4)
+        responses.insert(3, declaration_response)
         return responses
 
     def test_rejects_recognized_required_startup_imports_with_specific_evidence(self):
@@ -761,3 +775,220 @@ class RepositoryDependencyTests(TestCase):
                 result = self.check_dependencies(responses)
                 self.assertEqual(result["dependency_status"], "unavailable")
                 self.assertEqual(self.mock_get.call_count, 3)
+
+    def test_declared_initial_backend_rejects_before_a_passive_profile_can_pass(self):
+        for runtime in ("Node.js", "Python/Flask"):
+            with self.subTest(runtime=runtime):
+                declaration = json.dumps({
+                    "initial_appearance_requires_backend": True,
+                    "backend_runtime": runtime,
+                })
+                responses = self.make_declaration_responses(declaration)
+                declaration_sha = responses[3].json()["sha"]
+
+                result = self.check_dependencies(responses)
+
+                self.assertEqual(result, {
+                    "dependency_status": "rejected",
+                    "reason": (
+                        f"git-gallery.json declares that {runtime} is required for the homepage's initial appearance. "
+                        "Application backends are unsupported."
+                    ),
+                    "evidence_paths": ["git-gallery.json"],
+                    "tree_sha": self.tree_sha,
+                })
+                self.assertEqual(self.mock_get.call_count, 4)
+                self.assertEqual(
+                    self.mock_get.call_args.args[0],
+                    f"https://api.github.com/repos/example/site/git/blobs/{declaration_sha}",
+                )
+
+    def test_false_declaration_keeps_optional_forms_and_external_resources_supported(self):
+        homepage = (
+            '<html><head><title>Contact</title>'
+            '<link rel="stylesheet" href="https://cdn.example.com/site.css"></head>'
+            '<body><h1>Contact me</h1><form action="/api/contact" method="post">'
+            '<input name="message"><button>Send</button></form></body></html>'
+        )
+        declarations = (
+            {"initial_appearance_requires_backend": False},
+            {"initial_appearance_requires_backend": False, "backend_runtime": "Node.js"},
+        )
+        for declaration in declarations:
+            with self.subTest(declaration=declaration):
+                result = self.check_dependencies(
+                    self.make_declaration_responses(json.dumps(declaration), homepage)
+                )
+
+                self.assertEqual(result["dependency_status"], "passed")
+                self.assertIn("conforms to the bounded passive", result["reason"])
+                self.assertEqual(result["evidence_paths"], ["index.html"])
+                self.assertEqual(self.mock_get.call_count, 5)
+
+    def test_false_declaration_does_not_make_unfamiliar_javascript_pass(self):
+        declaration = json.dumps({"initial_appearance_requires_backend": False})
+        responses = self.make_declaration_responses(
+            declaration, self.homepage_text, 'document.getElementById("root").textContent = "Hello";'
+        )
+
+        result = self.check_dependencies(responses)
+
+        self.assertEqual(result["dependency_status"], "pending")
+        self.assertIn("not been ruled out", result["reason"])
+        self.assertEqual(self.mock_get.call_count, 6)
+
+    def test_invalid_declarations_block_a_passive_profile_with_pending(self):
+        declarations = (
+            '{', '[]', '"a string"', '{}',
+            '{"initial_appearance_requires_backend": true}',
+            '{"initial_appearance_requires_backend": "true", "backend_runtime": "Node.js"}',
+            '{"initial_appearance_requires_backend": 1, "backend_runtime": "Node.js"}',
+            '{"initial_appearance_requires_backend": null}',
+            '{"initial_appearance_requires_backend": true, "backend_runtime": ""}',
+            '{"initial_appearance_requires_backend": true, "backend_runtime": "   "}',
+            '{"initial_appearance_requires_backend": true, "backend_runtime": null}',
+            '{"initial_appearance_requires_backend": false, "backend_runtime": 123}',
+            '{"initial_appearance_requires_backend": false, "unknown_field": true}',
+            '{"initial_appearance_requires_backend": false, "initial_appearance_requires_backend": true}',
+            '{"initial_appearance_requires_backend": true, "backend_runtime": "Node.js", "backend_runtime": "Python"}',
+            json.dumps({"initial_appearance_requires_backend": True, "backend_runtime": "Node\n.js"}),
+            json.dumps({"initial_appearance_requires_backend": True, "backend_runtime": "\ud800"}),
+            b'\xff',
+        )
+        for declaration in declarations:
+            with self.subTest(declaration=declaration):
+                result = self.check_dependencies(self.make_declaration_responses(declaration))
+
+                self.assertEqual(result["dependency_status"], "pending")
+                self.assertIn("git-gallery.json", result["reason"])
+                self.assertIn("pending", result["reason"])
+                self.assertEqual(result["evidence_paths"], ["git-gallery.json"])
+                self.assertEqual(result["tree_sha"], self.tree_sha)
+
+    def test_declaration_cannot_hide_the_existing_startup_import_rejection(self):
+        declarations = (
+            '{"initial_appearance_requires_backend": false}',
+            '{',
+            '{"initial_appearance_requires_backend": false, "initial_appearance_requires_backend": true}',
+        )
+        for declaration in declarations:
+            with self.subTest(declaration=declaration):
+                result = self.check_dependencies(self.make_declaration_responses(
+                    declaration, self.homepage_text, self.startup_text
+                ))
+
+                self.assertEqual(result["dependency_status"], "rejected")
+                self.assertIn("package 'react-dom/client'", result["reason"])
+                self.assertIn("module resolution", result["reason"])
+                self.assertEqual(result["evidence_paths"], ["index.html", "src/main.js"])
+                self.assertEqual(self.mock_get.call_count, 6)
+
+    def test_uncertain_declaration_is_retained_when_startup_evidence_is_ambiguous(self):
+        responses = self.make_declaration_responses(
+            '{}', self.homepage_text, 'document.getElementById("root").textContent = "Hello";'
+        )
+
+        result = self.check_dependencies(responses)
+
+        self.assertEqual(result["dependency_status"], "pending")
+        self.assertIn("git-gallery.json", result["reason"])
+        self.assertEqual(result["evidence_paths"], ["git-gallery.json"])
+
+    def test_g_homepage_without_a_declaration_remains_pending(self):
+        # Source-shaped fixture from G at 6d0d57a4; this does not execute or inspect its backend.
+        homepage = (
+            '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+            '<meta name="viewport" content="width=device-width,initial-scale=1">'
+            '<title>Forecast desk</title><link rel="icon" href="data:,">'
+            '<link rel="stylesheet" href="styles.css"></head><body><main>'
+            '<h1>Forecast desk.</h1><p>This page requires its Node backend to load the forecast.</p>'
+            '<div id="forecast" role="status">Connecting to forecast service…</div>'
+            '</main><script src="app.js"></script></body></html>'
+        )
+
+        result = self.check_dependencies(self.make_static_responses(homepage))
+
+        self.assertEqual(result["dependency_status"], "pending")
+        self.assertEqual(result["evidence_paths"], ["index.html"])
+        self.assertEqual(self.mock_get.call_count, 4)
+
+    def test_declaration_retrieval_failures_are_unavailable(self):
+        failures = (
+            self.make_response({}, 404), self.make_response({}, 403),
+            requests.Timeout(), requests.ConnectionError(),
+            self.make_response({}), self.make_response([]),
+        )
+        for failure in failures:
+            with self.subTest(failure=type(failure).__name__):
+                responses = self.make_declaration_responses(
+                    '{"initial_appearance_requires_backend": true, "backend_runtime": "Node.js"}'
+                )
+                responses[3] = failure
+
+                result = self.check_dependencies(responses)
+
+                self.assertEqual(result["dependency_status"], "unavailable")
+                self.assertEqual(result["tree_sha"], self.tree_sha)
+                self.assertEqual(self.mock_get.call_count, 4)
+
+    def test_declaration_cannot_reject_from_an_incomplete_snapshot(self):
+        for truncated in (True, None):
+            with self.subTest(truncated=truncated):
+                responses = self.make_declaration_responses(
+                    '{"initial_appearance_requires_backend": true, "backend_runtime": "Node.js"}'
+                )
+                listing = responses[2].json()
+                listing["truncated"] = truncated
+                responses[2] = self.make_response(listing)
+
+                result = self.check_dependencies(responses)
+
+                self.assertEqual(result["dependency_status"], "unavailable")
+                self.assertEqual(self.mock_get.call_count, 3)
+
+    def test_declaration_reads_share_existing_inspection_limits(self):
+        declaration = '{"initial_appearance_requires_backend": false}'
+        with patch("git_gallery_app.services.dependencies.MAX_PROFILE_FILE_BYTES", 8):
+            result = self.check_dependencies(self.make_declaration_responses(declaration))
+        self.assertEqual(result["dependency_status"], "pending")
+        self.assertIn("inspection limit", result["reason"])
+        self.assertEqual(result["evidence_paths"], ["git-gallery.json"])
+        self.assertEqual(self.mock_get.call_count, 4)
+
+        content_limit = len(declaration.encode("utf-8")) + len(self.static_homepage.encode("utf-8")) - 1
+        with patch("git_gallery_app.services.dependencies.MAX_PROFILE_CONTENT_BYTES", content_limit):
+            result = self.check_dependencies(self.make_declaration_responses(declaration))
+        self.assertEqual(result["dependency_status"], "pending")
+        self.assertIn("total decoded file-content inspection limit", result["reason"])
+
+    def test_declared_backend_rejection_reaches_the_real_compatibility_endpoint(self):
+        declaration = '{"initial_appearance_requires_backend": true, "backend_runtime": "Node.js"}'
+        self.mock_get.side_effect = self.make_declaration_responses(declaration)
+        history_result = {"history_status": "passed", "reason": "Usable history.", "commit_count": 1}
+        html_result = {"html_status": "passed", "reason": "Root homepage found.", "html_pages": ["index.html"]}
+        with (
+            patch("git_gallery_app.services.github.check_repository_history", return_value=history_result),
+            patch("git_gallery_app.services.github.check_repository_html_pages", return_value=html_result),
+            patch("git_gallery_app.services.analyses._get_collection", side_effect=AssertionError("No application storage access.")),
+        ):
+            response = APIClient().post(
+                reverse("check-repository-compatibility"), {"url": self.repo_url}, format="json"
+            )
+
+        self.assertEqual(response.status_code, 200)
+        report = response.json()
+        self.assertEqual(report["overall_status"], "rejected")
+        self.assertIs(report["setup_available"], False)
+        self.assertIs(report["same_snapshot_guaranteed"], False)
+        self.assertEqual(report["history"], history_result)
+        self.assertEqual(report["html"], html_result)
+        self.assertEqual(report["dependencies"], {
+            "status": "rejected",
+            "reason": (
+                "git-gallery.json declares that Node.js is required for the homepage's initial appearance. "
+                "Application backends are unsupported."
+            ),
+            "evidence_paths": ["git-gallery.json"],
+            "tree_sha": self.tree_sha,
+        })
+        self.assertEqual(self.mock_get.call_count, 4)
