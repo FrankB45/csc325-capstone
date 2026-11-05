@@ -1,0 +1,36 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--color-lightgray);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  transition: box-shadow 200ms ease-out, transform 200ms ease-out;
+}
+.card:hover { box-shadow: 0 8px 24px rgba(11, 37, 69, 0.15); transform: translateY(-2px); }
+
+.thumbLink { display: block; }
+.thumb { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: var(--color-lightgray); }
+
+.body { padding: 16px 20px 20px; min-height: 120px; }
+.name { margin: 0 0 8px; font-size: 20px; font-weight: 700; }
+.meta { margin: 2px 0; font-size: 14px; color: var(--color-gray); }
+
+.detailsToggle {
+  margin-top: 12px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-purple);
+  cursor: pointer;
+}
+.detailsToggle:hover { color: var(--color-coral); }
+.chevronOpen { display: inline-block; transform: rotate(180deg); }
+.details { margin: 8px 0 0; font-size: 14px; line-height: 1.5; }
+
+.skeleton .thumb, .skeleton .body { background: var(--color-lightgray); opacity: 0.5; animation: pulse 1.2s ease-in-out infinite; }
+.skeleton .body { margin: 16px 20px 20px; border-radius: var(--radius-sm); }
+@keyframes pulse { 50% { opacity: 0.25; } }
