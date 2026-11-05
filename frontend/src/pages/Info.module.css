@@ -1,0 +1,9 @@
+.title { margin: 0 0 12px; font-size: clamp(32px, 4vw, 48px); font-weight: 600; }
+.lead { margin: 0 0 40px; font-size: 20px; color: var(--color-purple); }
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin: 0 0 48px; padding: 0; list-style: none; }
+.step { padding: 20px; border-radius: var(--radius-md); background: var(--color-white); border: 1px solid var(--color-lightgray); }
+.stepTitle { margin: 0 0 8px; font-size: 18px; }
+.faqTitle { font-size: 24px; }
+.faq { padding: 14px 0; border-bottom: 1px solid var(--color-lightgray); }
+.faq summary { cursor: pointer; font-weight: 600; }
+.faq p { margin: 8px 0 0; line-height: 1.5; }
