@@ -1,15 +1,57 @@
-body {
-  margin: 0;
-  line-height: normal;
-}
 :root {
-  /* Common Style Variables */
-
-  /* Color Pallete */
+  /* Palette */
+  --color-surface: #fefeff;
   --color-white: #f3f3ff;
   --color-navy: #0b2545;
+  --color-navy-50: rgba(11, 37, 69, 0.5);
   --color-coral: #ff7551;
   --color-light-coral: #ff9974;
   --color-purple: #8e6c88;
   --color-light-purple: #a589a0;
+  --color-indigo: #3b0086;
+  --color-lightgray: #cfd2cd;
+  --color-gray: #767875;
+  --color-error: #ba0202;
+
+  /* Type */
+  --font-inter: Inter, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "DM Mono", monospace;
+
+  /* Shape */
+  --radius-sm: 5px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  /* Layout */
+  --page-gutter: clamp(20px, 4.4vw, 63px);
+  --header-height: clamp(80px, 10vw, 142px);
+  --content-width: 1100px;
+
+  --gradient-border: linear-gradient(98.52deg, #f7b32b, var(--color-coral));
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  line-height: normal;
+  font-family: var(--font-inter);
+  color: var(--color-navy);
+  background-color: var(--color-surface);
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-indigo);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
