@@ -145,7 +145,7 @@ def create_analysis(request):
     return Response(save_analysis(snapshot), status=201)
 @api_view(["POST"])
 def check_repository_compatibility(request):
-    """Return the existing compatibility report without enabling project setup."""
+    """Return the compatibility report and its limited-MVP setup decision."""
     # Let DRF handle JSON parsing errors before handling service failures below.
     data = request.data
     if not isinstance(data, dict):
@@ -163,8 +163,8 @@ def check_repository_compatibility(request):
     try:
         report = get_repository_compatibility_report(url)
         overall_status = report["overall_status"]
-        # A negative result is still a completed report, not a failed HTTP request.
-        if overall_status in ("rejected", "pending"):
+        # HTTP 200 means a report was returned; its status decides setup availability.
+        if overall_status in ("accepted", "rejected", "pending"):
             return Response(report, status=200)
         elif overall_status == "unavailable":
             return Response(report, status=502)
