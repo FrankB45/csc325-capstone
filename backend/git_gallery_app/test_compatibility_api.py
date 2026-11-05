@@ -25,7 +25,9 @@ class RepositoryCompatibilityApiTests(APISimpleTestCase):
             },
             "dependencies": {
                 "status": "pending",
-                "reason": "Unsupported-dependency checking is not implemented.",
+                "reason": "This limited check has not established an unsupported dependency.",
+                "evidence_paths": ["index.html", "src/main.js"],
+                "tree_sha": "a" * 40,
             },
             "setup_available": False,
             "same_snapshot_guaranteed": False,
@@ -133,6 +135,48 @@ class RepositoryCompatibilityApiTests(APISimpleTestCase):
         self.assertEqual(response.status_code, 502)
         self.assertEqual(response.json(), self.report)
         self.assertEqual(response.json()["history"]["commit_count"], 12)
+
+    def test_dependency_rejection_returns_200_with_explanation_and_evidence(self):
+        self.report["overall_status"] = "rejected"
+        self.report["reason"] = "An implemented check found a failed repository prerequisite."
+        self.report["dependencies"]["status"] = "rejected"
+        self.report["dependencies"]["reason"] = (
+            "Homepage 'index.html' requires startup file 'src/main.js', which imports "
+            "package 'react-dom/client' without a browser import map."
+        )
+        original_report = deepcopy(self.report)
+
+        response = self.client.post(self.endpoint, {"url": self.repo_url}, format="json")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), original_report)
+        self.assertEqual(self.report, original_report)
+        self.assertEqual(response.json()["dependencies"]["status"], "rejected")
+        self.assertEqual(
+            response.json()["dependencies"]["reason"], original_report["dependencies"]["reason"]
+        )
+        self.assertEqual(
+            response.json()["dependencies"]["evidence_paths"], ["index.html", "src/main.js"]
+        )
+        self.assertEqual(response.json()["dependencies"]["tree_sha"], "a" * 40)
+
+    def test_dependency_unavailable_returns_502_with_report_fields(self):
+        self.report["overall_status"] = "unavailable"
+        self.report["reason"] = "At least one implemented check could not complete reliably."
+        self.report["dependencies"]["status"] = "unavailable"
+        self.report["dependencies"]["reason"] = "Could not retrieve the fixed repository snapshot from GitHub."
+        original_report = deepcopy(self.report)
+
+        response = self.client.post(self.endpoint, {"url": self.repo_url}, format="json")
+
+        self.assertEqual(response.status_code, 502)
+        self.assertEqual(response.json(), original_report)
+        self.assertEqual(self.report, original_report)
+        self.assertEqual(response.json()["dependencies"]["status"], "unavailable")
+        self.assertEqual(
+            response.json()["dependencies"]["evidence_paths"], ["index.html", "src/main.js"]
+        )
+        self.assertEqual(response.json()["dependencies"]["tree_sha"], "a" * 40)
 
     def test_non_object_json_is_rejected_before_calling_service(self):
         for body in ("[]", '"a string"', "null", "123", "true"):

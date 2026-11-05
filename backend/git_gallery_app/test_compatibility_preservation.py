@@ -98,6 +98,18 @@ class CompatibilityRecheckPreservationTests(APITransactionTestCase):
             "default_branch": "main",
             "html_url": self.repo_url,
         }
+        # Dependency detection is separate from this saved-data preservation test.
+        dependency_patch = patch(
+            "git_gallery_app.services.dependencies.check_repository_dependencies",
+            return_value={
+                "dependency_status": "pending",
+                "reason": "This limited check has not established an unsupported dependency.",
+                "evidence_paths": [],
+                "tree_sha": self.tree_sha,
+            },
+        )
+        dependency_patch.start()
+        self.addCleanup(dependency_patch.stop)
 
     def make_github_response(self, data):
         """Build a GitHub HTTP response without making a network request."""
