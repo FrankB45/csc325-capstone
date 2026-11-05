@@ -1,4 +1,4 @@
-from django.test import TestCase
+from django.test import SimpleTestCase
 
 from django.test import TransactionTestCase
 from django.utils import timezone
