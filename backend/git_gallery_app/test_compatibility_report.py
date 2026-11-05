@@ -82,6 +82,15 @@ class RepositoryCompatibilityReportTests(TestCase):
             ("unavailable", "passed", "unavailable", "unavailable"),
             ("unavailable", "rejected", "unavailable", "rejected"),
             ("unavailable", "unavailable", "unavailable", "unavailable"),
+            ("passed", "passed", "passed", "pending"),
+            ("passed", "rejected", "passed", "rejected"),
+            ("passed", "unavailable", "passed", "unavailable"),
+            ("rejected", "passed", "passed", "rejected"),
+            ("rejected", "rejected", "passed", "rejected"),
+            ("rejected", "unavailable", "passed", "rejected"),
+            ("unavailable", "passed", "passed", "unavailable"),
+            ("unavailable", "rejected", "passed", "rejected"),
+            ("unavailable", "unavailable", "passed", "unavailable"),
         )
         for history_status, html_status, dependency_status, expected_status in cases:
             with self.subTest(
@@ -215,7 +224,7 @@ class RepositoryCompatibilityReportTests(TestCase):
             (self.history_result, self.html_result, {"reason": "Missing dependency status."}),
             (self.history_result, self.html_result, {"dependency_status": None}),
             (self.history_result, self.html_result, {"dependency_status": "unknown"}),
-            (self.history_result, self.html_result, {"dependency_status": "passed"}),
+            (self.history_result, self.html_result, {"dependency_status": "compatible"}),
             (self.history_result, self.html_result, {"dependency_status": []}),
         )
         for history_result, html_result, dependency_result in cases:
@@ -255,4 +264,22 @@ class RepositoryCompatibilityReportTests(TestCase):
     def test_report_does_not_claim_a_shared_snapshot(self):
         report = get_repository_compatibility_report(self.repo_url)
 
+        self.assertIs(report["same_snapshot_guaranteed"], False)
+
+    def test_passive_profile_pass_still_blocks_overall_acceptance(self):
+        self.dependency_result["dependency_status"] = "passed"
+        self.dependency_result["reason"] = "The homepage conforms to the bounded passive profile."
+        self.dependency_result["evidence_paths"] = ["INDEX.HTML", "css/site.css", "images/logo.png"]
+        original_dependencies = deepcopy(self.dependency_result)
+
+        report = get_repository_compatibility_report(self.repo_url)
+
+        self.assertEqual(report["overall_status"], "pending")
+        self.assertIn("Multiple-independent-website detection remains unfinished", report["reason"])
+        self.assertEqual(report["dependencies"]["status"], "passed")
+        self.assertEqual(report["dependencies"]["reason"], original_dependencies["reason"])
+        self.assertEqual(report["dependencies"]["evidence_paths"], original_dependencies["evidence_paths"])
+        self.assertEqual(report["dependencies"]["tree_sha"], original_dependencies["tree_sha"])
+        self.assertEqual(self.dependency_result, original_dependencies)
+        self.assertIs(report["setup_available"], False)
         self.assertIs(report["same_snapshot_guaranteed"], False)

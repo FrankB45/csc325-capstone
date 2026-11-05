@@ -410,16 +410,22 @@ def get_repository_compatibility_report(repo_url: str) -> dict:
     elif (
         history_status != "passed"
         or html_status != "passed"
-        or dependency_status != "pending"
+        or dependency_status not in ("pending", "passed")
     ):
         overall_status = "unavailable"
         reason = "At least one implemented check could not complete reliably."
     else:
         overall_status = "pending"
-        reason = (
-            "History and candidate HTML checks passed; "
-            "unsupported-dependency checking is unfinished."
-        )
+        if dependency_status == "passed":
+            reason = (
+                "The implemented checks passed their limited profiles; full compatibility "
+                "is still pending. Multiple-independent-website detection remains unfinished."
+            )
+        else:
+            reason = (
+                "History and candidate HTML checks passed; "
+                "unsupported-dependency checking is unfinished."
+            )
 
     return {
         "overall_status": overall_status,

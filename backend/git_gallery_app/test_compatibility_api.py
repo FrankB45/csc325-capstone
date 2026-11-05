@@ -178,6 +178,24 @@ class RepositoryCompatibilityApiTests(APISimpleTestCase):
         )
         self.assertEqual(response.json()["dependencies"]["tree_sha"], "a" * 40)
 
+    def test_passive_profile_pass_returns_pending_200_without_enabling_setup(self):
+        self.report["dependencies"]["status"] = "passed"
+        self.report["dependencies"]["reason"] = (
+            "The homepage conforms to the bounded passive profile; screenshot success is unverified."
+        )
+        self.report["reason"] = "Multiple-independent-website detection remains unfinished."
+        original_report = deepcopy(self.report)
+
+        response = self.client.post(self.endpoint, {"url": self.repo_url}, format="json")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), original_report)
+        self.assertEqual(self.report, original_report)
+        self.assertEqual(response.json()["dependencies"]["status"], "passed")
+        self.assertEqual(response.json()["overall_status"], "pending")
+        self.assertIs(response.json()["setup_available"], False)
+        self.assertIs(response.json()["same_snapshot_guaranteed"], False)
+
     def test_non_object_json_is_rejected_before_calling_service(self):
         for body in ("[]", '"a string"', "null", "123", "true"):
             with self.subTest(body=body):
