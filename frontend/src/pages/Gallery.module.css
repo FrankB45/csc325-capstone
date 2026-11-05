@@ -1,0 +1,5 @@
+.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 32px; }
+.title { margin: 0; font-size: clamp(32px, 4vw, 48px); font-weight: 600; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 32px; }
+.error { color: var(--color-error); font-weight: 700; }
+.empty { color: var(--color-purple); font-size: 18px; }
