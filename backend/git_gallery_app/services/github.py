@@ -230,7 +230,7 @@ def _history_http_failure(error: requests.HTTPError, checking_commits: bool) -> 
 
 
 def check_repository_html_pages(repo_url: str) -> dict:
-    """Discover candidate filenames only, without deciding full compatibility."""
+    """Check the required homepage and discover candidate filenames only."""
     try:
         owner, repo = parse_github_url(repo_url)
     except ValueError as error:
@@ -279,18 +279,29 @@ def check_repository_html_pages(repo_url: str) -> dict:
     except ValueError as error:
         return {"html_status": "unavailable", "html_pages": [], "reason": str(error)}
 
-    if not html_pages:
+    # Only a complete, validated listing can establish a missing homepage.
+    has_root_index = False
+    for path in html_pages:
+        if path.lower() == "index.html":
+            has_root_index = True
+            break
+
+    if not has_root_index:
         return {
             "html_status": "rejected",
-            "html_pages": [],
-            "reason": "The default branch contains no candidate lowercase .html files.",
+            "html_pages": html_pages,
+            "reason": (
+                "The default branch must contain a regular root index.html file "
+                "(filename matching ignores case)."
+            ),
         }
 
     return {
         "html_status": "passed",
         "html_pages": html_pages,
         "reason": (
-            "Candidate HTML filenames were found. Page rendering and full repository "
+            "A root index.html file and candidate HTML filenames were found. "
+            "Page rendering and full repository "
             "compatibility have not been checked; dependency checks are still required."
         ),
     }
@@ -366,8 +377,10 @@ def _list_html_page_paths(owner: str, repo: str, tree_sha: str) -> list[str]:
         ):
             raise ValueError("GitHub returned a malformed file entry.")
 
-        if mode in ("100644", "100755") and path.endswith(".html"):
-            html_pages.append(path)
+        if mode in ("100644", "100755"):
+            lowercase_path = path.lower()
+            if lowercase_path.endswith(".html") or lowercase_path.endswith(".htm"):
+                html_pages.append(path)
 
     return sorted(html_pages)
 
