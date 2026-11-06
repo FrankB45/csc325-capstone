@@ -230,7 +230,7 @@ def _history_http_failure(error: requests.HTTPError, checking_commits: bool) -> 
 
 
 def check_repository_html_pages(repo_url: str) -> dict:
-    """Discover candidate filenames only, without deciding full compatibility."""
+    """Check the required homepage and discover candidate filenames only."""
     try:
         owner, repo = parse_github_url(repo_url)
     except ValueError as error:
@@ -279,18 +279,29 @@ def check_repository_html_pages(repo_url: str) -> dict:
     except ValueError as error:
         return {"html_status": "unavailable", "html_pages": [], "reason": str(error)}
 
-    if not html_pages:
+    # Only a complete, validated listing can establish a missing homepage.
+    has_root_index = False
+    for path in html_pages:
+        if path.lower() == "index.html":
+            has_root_index = True
+            break
+
+    if not has_root_index:
         return {
             "html_status": "rejected",
-            "html_pages": [],
-            "reason": "The default branch contains no candidate lowercase .html files.",
+            "html_pages": html_pages,
+            "reason": (
+                "The default branch must contain a regular root index.html file "
+                "(filename matching ignores case)."
+            ),
         }
 
     return {
         "html_status": "passed",
         "html_pages": html_pages,
         "reason": (
-            "Candidate HTML filenames were found. Page rendering and full repository "
+            "A root index.html file and candidate HTML filenames were found. "
+            "Page rendering and full repository "
             "compatibility have not been checked; dependency checks are still required."
         ),
     }
@@ -366,31 +377,58 @@ def _list_html_page_paths(owner: str, repo: str, tree_sha: str) -> list[str]:
         ):
             raise ValueError("GitHub returned a malformed file entry.")
 
-        if mode in ("100644", "100755") and path.endswith(".html"):
-            html_pages.append(path)
+        if mode in ("100644", "100755"):
+            lowercase_path = path.lower()
+            if lowercase_path.endswith(".html") or lowercase_path.endswith(".htm"):
+                html_pages.append(path)
 
     return sorted(html_pages)
 
 
 def get_repository_compatibility_report(repo_url: str) -> dict:
-    """Combine prerequisite results without declaring full compatibility."""
+    """Combine checks to decide availability of setup under the limited MVP profile."""
+    # Import here because the dependency service reuses this module's GitHub helpers.
+    from .dependencies import check_repository_dependencies
+
     history_result = check_repository_history(repo_url)
     html_result = check_repository_html_pages(repo_url)
+    dependency_result = check_repository_dependencies(repo_url)
     history_status = history_result.get("history_status")
     html_status = html_result.get("html_status")
+    dependencies = dependency_result.copy()
+    dependency_status = dependencies.pop("dependency_status", None)
+    dependencies["status"] = dependency_status
+    setup_available = False
 
-    # A known rejection takes precedence even if the other check is unavailable.
-    if history_status == "rejected" or html_status == "rejected":
+    # A known rejection takes precedence even if another check is unavailable.
+    if (
+        history_status == "rejected"
+        or html_status == "rejected"
+        or dependency_status == "rejected"
+    ):
         overall_status = "rejected"
         reason = "An implemented check found a failed repository prerequisite."
-    elif history_status != "passed" or html_status != "passed":
+    elif (
+        history_status not in ("passed", "pending")
+        or html_status not in ("passed", "pending")
+        or dependency_status not in ("pending", "passed")
+    ):
         overall_status = "unavailable"
         reason = "At least one implemented check could not complete reliably."
-    else:
+    elif (
+        history_status == "pending"
+        or html_status == "pending"
+        or dependency_status == "pending"
+    ):
         overall_status = "pending"
+        reason = "At least one compatibility check remains unfinished."
+    else:
+        overall_status = "accepted"
+        setup_available = True
         reason = (
-            "History and candidate HTML checks passed; "
-            "unsupported-dependency checking is unfinished."
+            "The repository meets the limited supported-site profile for entering project setup. "
+            "This does not guarantee screenshot success or complete dependency detection. "
+            "Multiple-independent-website detection is deferred from this MVP setup gate."
         )
 
     return {
@@ -398,11 +436,8 @@ def get_repository_compatibility_report(repo_url: str) -> dict:
         "reason": reason,
         "history": history_result,
         "html": html_result,
-        "dependencies": {
-            "status": "pending",
-            "reason": "Unsupported-dependency checking is not implemented.",
-        },
-        "setup_available": False,
+        "dependencies": dependencies,
+        "setup_available": setup_available,
         # Each check resolves the default branch independently.
         "same_snapshot_guaranteed": False,
     }

@@ -23,7 +23,7 @@ class RepositoryHtmlPagesTests(TestCase):
             "sha": self.tree_sha,
             "truncated": False,
             "tree": [
-                {"path": "home.html", "type": "blob", "mode": "100644"},
+                {"path": "index.html", "type": "blob", "mode": "100644"},
                 {"path": "pages", "type": "tree", "mode": "040000"},
                 {"path": "pages/about.html", "type": "blob", "mode": "100644"},
             ],
@@ -56,22 +56,82 @@ class RepositoryHtmlPagesTests(TestCase):
         result = self.check_html_pages()
 
         self.assertEqual(result["html_status"], "passed")
-        self.assertEqual(result["html_pages"], ["home.html", "pages/about.html"])
+        self.assertEqual(result["html_pages"], ["index.html", "pages/about.html"])
         self.assertEqual(self.mock_get.call_count, 3)
+
+    def test_accepts_case_insensitive_root_index_html(self):
+        for homepage in ("index.html", "index.HTML", "INDEX.HTML", "InDeX.HtMl"):
+            with self.subTest(homepage=homepage):
+                self.tree_data["tree"] = [
+                    {"path": homepage, "type": "blob", "mode": "100644"},
+                ]
+
+                result = self.check_html_pages()
+
+                self.assertEqual(result["html_status"], "passed")
+                self.assertEqual(result["html_pages"], [homepage])
+
+    def test_includes_html_and_htm_files_with_mixed_case_extensions(self):
+        paths = (
+            "about.html", "about.htm", "about.HTML", "about.HTM",
+            "pages/About.HtMl", "pages/About.HtM",
+        )
+        for path in paths:
+            with self.subTest(path=path):
+                self.tree_data["tree"] = [
+                    {"path": "index.html", "type": "blob", "mode": "100644"},
+                    {"path": path, "type": "blob", "mode": "100644"},
+                ]
+
+                result = self.check_html_pages()
+
+                self.assertEqual(result["html_status"], "passed")
+                self.assertIn("index.html", result["html_pages"])
+                self.assertIn(path, result["html_pages"])
+                self.assertEqual(len(result["html_pages"]), 2)
 
     def test_sorts_paths_without_changing_their_spelling(self):
         self.tree_data["tree"] = [
-            {"path": "z.html", "type": "blob", "mode": "100644"},
-            {"path": "Pages/About Us.html", "type": "blob", "mode": "100644"},
+            {"path": "z.HTML", "type": "blob", "mode": "100644"},
+            {"path": "Pages/About Us.HtM", "type": "blob", "mode": "100644"},
             {"path": "a.html", "type": "blob", "mode": "100644"},
+            {"path": "INDEX.HTML", "type": "blob", "mode": "100644"},
         ]
 
         result = self.check_html_pages()
 
-        self.assertEqual(result["html_pages"], ["Pages/About Us.html", "a.html", "z.html"])
+        self.assertEqual(
+            result["html_pages"], ["INDEX.HTML", "Pages/About Us.HtM", "a.html", "z.HTML"]
+        )
 
-    def test_does_not_require_root_index_or_exclude_directories(self):
+    def test_rejects_missing_root_homepage_even_with_nested_html(self):
         self.tree_data["tree"] = [
+            {"path": "docs/index.html", "type": "blob", "mode": "100644"},
+            {"path": "vendor/demo.html", "type": "blob", "mode": "100644"},
+        ]
+
+        result = self.check_html_pages()
+
+        self.assertEqual(result["html_status"], "rejected")
+        self.assertEqual(result["html_pages"], ["docs/index.html", "vendor/demo.html"])
+        self.assertIn("root index.html", result["reason"])
+
+    def test_other_index_names_do_not_replace_root_index_html(self):
+        for path in ("index.htm", "INDEX.HTM", "my-index.html", "pages/INDEX.HTML"):
+            with self.subTest(path=path):
+                self.tree_data["tree"] = [
+                    {"path": path, "type": "blob", "mode": "100644"},
+                ]
+
+                result = self.check_html_pages()
+
+                self.assertEqual(result["html_status"], "rejected")
+                self.assertEqual(result["html_pages"], [path])
+                self.assertIn("root index.html", result["reason"])
+
+    def test_includes_nested_pages_without_directory_exclusions(self):
+        self.tree_data["tree"] = [
+            {"path": "index.html", "type": "blob", "mode": "100644"},
             {"path": "docs/example.html", "type": "blob", "mode": "100644"},
             {"path": "vendor/demo.html", "type": "blob", "mode": "100644"},
         ]
@@ -79,16 +139,20 @@ class RepositoryHtmlPagesTests(TestCase):
         result = self.check_html_pages()
 
         self.assertEqual(result["html_status"], "passed")
-        self.assertEqual(result["html_pages"], ["docs/example.html", "vendor/demo.html"])
+        self.assertEqual(
+            result["html_pages"], ["docs/example.html", "index.html", "vendor/demo.html"]
+        )
 
     def test_includes_executable_regular_html_files(self):
         self.tree_data["tree"] = [
-            {"path": "page.html", "type": "blob", "mode": "100755"},
+            {"path": "INDEX.HTML", "type": "blob", "mode": "100755"},
+            {"path": "page.htm", "type": "blob", "mode": "100755"},
         ]
 
         result = self.check_html_pages()
 
-        self.assertEqual(result["html_pages"], ["page.html"])
+        self.assertEqual(result["html_status"], "passed")
+        self.assertEqual(result["html_pages"], ["INDEX.HTML", "page.htm"])
 
     def test_complete_listing_without_html_is_rejected(self):
         for entries in ([], [{"path": "README.md", "type": "blob", "mode": "100644"}]):
@@ -99,30 +163,48 @@ class RepositoryHtmlPagesTests(TestCase):
 
                 self.assertEqual(result["html_status"], "rejected")
                 self.assertEqual(result["html_pages"], [])
-                self.assertIn("no candidate lowercase .html files", result["reason"])
+                self.assertIn("root index.html", result["reason"])
 
     def test_excludes_directories_symlinks_and_submodules(self):
         self.tree_data["tree"] = [
-            {"path": "directory.html", "type": "tree", "mode": "040000"},
-            {"path": "link.html", "type": "blob", "mode": "120000"},
-            {"path": "module.html", "type": "commit", "mode": "160000"},
+            {"path": "index.html", "type": "blob", "mode": "100644"},
+            {"path": "directory.HTML", "type": "tree", "mode": "040000"},
+            {"path": "link.HtM", "type": "blob", "mode": "120000"},
+            {"path": "module.htm", "type": "commit", "mode": "160000"},
         ]
 
         result = self.check_html_pages()
 
-        self.assertEqual(result["html_status"], "rejected")
-        self.assertEqual(result["html_pages"], [])
+        self.assertEqual(result["html_status"], "passed")
+        self.assertEqual(result["html_pages"], ["index.html"])
+
+    def test_root_homepage_must_be_a_regular_file(self):
+        entries = (("tree", "040000"), ("blob", "120000"), ("commit", "160000"))
+        for entry_type, mode in entries:
+            with self.subTest(entry_type=entry_type, mode=mode):
+                self.tree_data["tree"] = [
+                    {"path": "INDEX.HTML", "type": entry_type, "mode": mode},
+                    {"path": "about.htm", "type": "blob", "mode": "100644"},
+                ]
+
+                result = self.check_html_pages()
+
+                self.assertEqual(result["html_status"], "rejected")
+                self.assertEqual(result["html_pages"], ["about.htm"])
+                self.assertIn("root index.html", result["reason"])
 
     def test_excludes_unsupported_extensions(self):
-        paths = ("a.htm", "b.HTML", "c.Html", "d.xhtml", "e.html.bak", "f.js")
+        paths = ("d.xhtml", "e.html.bak", "f.js", "g.htm.bak")
         self.tree_data["tree"] = [
-            {"path": path, "type": "blob", "mode": "100644"} for path in paths
+            {"path": "index.html", "type": "blob", "mode": "100644"},
         ]
+        for path in paths:
+            self.tree_data["tree"].append({"path": path, "type": "blob", "mode": "100644"})
 
         result = self.check_html_pages()
 
-        self.assertEqual(result["html_status"], "rejected")
-        self.assertEqual(result["html_pages"], [])
+        self.assertEqual(result["html_status"], "passed")
+        self.assertEqual(result["html_pages"], ["index.html"])
 
     def test_passed_result_does_not_claim_full_compatibility(self):
         result = self.check_html_pages()
@@ -211,7 +293,7 @@ class RepositoryHtmlPagesTests(TestCase):
         for entry in invalid_entries:
             with self.subTest(entry=entry):
                 self.tree_data["tree"] = [
-                    {"path": "good.html", "type": "blob", "mode": "100644"},
+                    {"path": "INDEX.HTML", "type": "blob", "mode": "100644"},
                     entry,
                 ]
 
