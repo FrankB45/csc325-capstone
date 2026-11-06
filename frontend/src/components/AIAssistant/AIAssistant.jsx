@@ -1,5 +1,5 @@
 import { useId, useState } from "react";
-import Button from "../Button/Button.jsx";
+import Button from "../AIAssistantButton.jsx";
 import styles from "./AIAssistant.module.css";
 
 /** Collapsible assistant panel. `onAsk(question)` should return a promise of the answer text. */

@@ -16,6 +16,8 @@
   /* Type */
   --font-inter: Inter, Arial, sans-serif;
   --font-mono: "JetBrains Mono", "DM Mono", monospace;
+  --font-dm-sans: "DM Sans", Arial, sans-serif;
+  --font-dm-mono: "DM Mono", monospace;
 
   /* Shape */
   --radius-sm: 5px;
