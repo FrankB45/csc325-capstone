@@ -1,13 +1,15 @@
 import { useEffect, useId, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PageLayout from "../components/PageLayout/PageLayout.jsx";
-import Button from "../components/New Project Button/NewProjectButton.jsx";
+import NextButton from "../components/NextButton/NextButton.jsx";
+import CancelButton from "../components/CancelButton/CancelButton.jsx";
 import Spinner from "../components/Spinner/Spinner.jsx";
 import CommitPicker from "../components/CommitPicker/CommitPicker.jsx";
 import { useRepositoryLookup } from "../hooks/useRepositoryLookup.js";
 import { MOCK_COMMITS } from "../data/mock.js";
 import { MIN_COMMITS, preselectCommits } from "../utils/commits.js";
 import styles from "./NewProject.module.css";
+import watermark from "../assets/octocat-watermark.svg";
 
 const NewProject = () => {
   const navigate = useNavigate();
@@ -20,8 +22,9 @@ const NewProject = () => {
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
 
-  // TODO: load the repository's real commits from the backend; mock list for now.
+  // TODO: load the repository's real commits + preview screenshot from the backend; mock data for now.
   const commits = MOCK_COMMITS;
+  const previewImage = commits[commits.length - 1].image;
   const defaultSelection = useMemo(() => preselectCommits(commits), [commits]);
   const [selectedIds, setSelectedIds] = useState(defaultSelection);
 
@@ -46,12 +49,22 @@ const NewProject = () => {
     if (selectedIds.length >= MIN_COMMITS && title.trim()) setStep("creating");
   }
 
+  // The read-only URL on the setup step is "click to change": it returns to step 1 with the URL kept.
+  function changeUrl() {
+    reset();
+    setStep("url");
+  }
+
   if (step === "creating") {
     return (
-      <PageLayout width="narrow">
-        <div className={styles.creating} role="status">
-          <h1 className={styles.creatingTitle}>Creating Timeline</h1>
-          <Spinner size={56} label="Creating timeline" />
+      <PageLayout width="full">
+        <div className={styles.page}>
+          {/* decorative background mark, clipped by the right edge of the page */}
+          <img className={styles.watermark} src={watermark} alt="" aria-hidden="true" />
+          <div className={styles.creating} role="status">
+            <h1 className={styles.creatingTitle}>Creating Timeline</h1>
+            <Spinner size={56} label="Creating timeline" />
+          </div>
         </div>
       </PageLayout>
     );
@@ -59,15 +72,28 @@ const NewProject = () => {
 
   if (step === "setup") {
     return (
-      <PageLayout width="narrow">
+      <PageLayout width="narrow" watermark>
         <h1 className={styles.title}>New Project</h1>
         <form className={styles.form} onSubmit={handleSetupSubmit}>
           <div className={styles.field}>
-            <span className={styles.label}>GitHub Repository URL</span>
-            <p className={styles.readonly}>{repository?.url ?? url}</p>
+            <label className={styles.label} htmlFor={urlId}>GitHub Repository URL</label>
+            <input
+              id={urlId}
+              className={`${styles.input} ${styles.inputReadonly}`}
+              value={repository?.url ?? url}
+              readOnly
+              title="Click to change the repository"
+              onClick={changeUrl}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  changeUrl();
+                }
+              }}
+            />
           </div>
 
-          <div className={styles.field}>
+          <div className={`${styles.field} ${styles.titleField}`}>
             <label className={styles.label} htmlFor={titleId}>Project Title</label>
             <input
               id={titleId}
@@ -78,21 +104,15 @@ const NewProject = () => {
             />
           </div>
 
+          <div className={styles.preview}>
+            <img src={previewImage} alt={`Preview of ${title || "the project"}`} />
+          </div>
+
           <CommitPicker commits={commits} selectedIds={selectedIds} onChange={setSelectedIds} />
 
           <div className={styles.actions}>
-            <NewProjectButton type="submit" size="md" disabled={selectedIds.length < MIN_COMMITS || !title.trim()}>
-              Create Project
-            </NewProjectButton>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                reset();
-                setStep("url");
-              }}
-            >
-              Back
-            </Button>
+            <NextButton disabled={selectedIds.length < MIN_COMMITS || !title.trim()} />
+            <CancelButton to="/" />
           </div>
         </form>
       </PageLayout>
@@ -102,10 +122,10 @@ const NewProject = () => {
   const isInvalid = status === "invalid";
 
   return (
-    <PageLayout width="narrow">
+    <PageLayout width="narrow" watermark>
       <h1 className={styles.title}>New Project</h1>
       <form className={styles.form} onSubmit={handleUrlSubmit} noValidate>
-        <div className={styles.field}>
+        <div className={`${styles.field} ${styles.urlStep}`}>
           <label className={styles.label} htmlFor={urlId}>GitHub Repository URL</label>
           <input
             id={urlId}
@@ -116,7 +136,7 @@ const NewProject = () => {
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://github.com/your-username/your-repository"
             spellCheck={false}
-            disabled={status === "loading"}
+            readOnly={status === "loading"}
             aria-invalid={isInvalid}
             aria-describedby={isInvalid ? errorId : undefined}
           />
@@ -128,8 +148,8 @@ const NewProject = () => {
         </div>
 
         <div className={styles.actions}>
-          <Button type="submit" size="md" loading={status === "loading"}>Next</Button>
-          <Button to="/" variant="ghost">Cancel</Button>
+          <NextButton loading={status === "loading"} loadingLabel="Checking repository" />
+          <CancelButton to="/" />
         </div>
       </form>
     </PageLayout>
