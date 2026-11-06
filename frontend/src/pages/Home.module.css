@@ -1,15 +1,111 @@
-.hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px; }
-.wordmark { margin: 0; font-family: var(--font-mono); font-size: clamp(48px, 9vw, 96px); letter-spacing: -1.2px; color: var(--color-indigo); }
-.accent { color: var(--color-coral); }
-.tagline { margin: 0 0 24px; font-size: clamp(18px, 2vw, 24px); color: var(--color-purple); }
-.actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 24px; }
+/* Layout follows the 1440px landing design: a 856px column (x 292–1148),
+   left-aligned logo + tagline, centered buttons, two 400px cards that sit
+   flush with the bottom of the page, and a large octocat mark bleeding off the right edge. */
 
-.features { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 32px; margin-top: clamp(48px, 8vw, 96px); }
-.feature {
-  padding: 40px;
-  border: 5px solid transparent;
-  border-radius: 69px;
-  background: #d9d9d9 padding-box, var(--gradient-border) border-box;
+.page {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
-.featureTitle { margin: 0 0 12px; font-family: var(--font-mono); font-size: 20px; }
-.featureText { margin: 0; font-size: 16px; line-height: 1.5; color: var(--color-purple); }
+
+.watermark {
+  --size: clamp(360px, 50vw, 722px);
+  position: absolute;
+  top: clamp(24px, 7vw, 103px);
+  right: calc(var(--size) / -2);
+  width: var(--size);
+  height: var(--size);
+  opacity: 0.5; /* #8E6C88 at 50% ≈ the soft lilac in the design */
+  pointer-events: none;
+  user-select: none;
+}
+
+.content {
+  position: relative; /* sits above the watermark */
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: calc(856px + 2 * var(--page-gutter));
+  margin: 0 auto;
+  padding: clamp(40px, 10vw, 147px) var(--page-gutter) 0;
+}
+
+/* ---------- hero ---------- */
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-bottom: 64px;
+}
+
+.title { margin: 0; line-height: 0; }
+.wordmark { display: block; width: min(336px, 70vw); height: auto; }
+
+.tagline {
+  margin: 16px 0 0;
+  font-size: clamp(18px, 1.7vw, 24px);
+  line-height: 1.3;
+  color: var(--color-purple);
+}
+
+.actions {
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 23px;
+  margin-top: clamp(40px, 4.4vw, 63px);
+}
+
+/* ---------- feature cards ---------- */
+.features {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 56px;
+  margin-top: auto; /* push to the bottom of the page */
+}
+
+.feature {
+  min-height: 312px;
+  padding: 40px 33px 32px;
+  border: 5px solid transparent;
+  border-bottom: none;
+  border-radius: 69px 69px 0 0;
+  /* grey fill clipped to the padding box + gradient clipped to the border box.
+     (a plain colour is only valid on the LAST background layer, so the fill is a gradient) */
+  background:
+    linear-gradient(#d9d9d9, #d9d9d9) padding-box,
+    linear-gradient(98.52deg, #F7B32B, #FF7F51) border-box;
+}
+
+.featureTitle {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--color-navy);
+}
+
+.featureText {
+  max-width: 290px;
+  margin: 12px 0 0;
+  font-size: 16px;
+  line-height: 1.42;
+  color: var(--color-purple);
+}
+
+/* ---------- small screens: stack the cards ---------- */
+@media (max-width: 760px) {
+  .hero { margin-bottom: 40px; }
+  .features { grid-template-columns: 1fr; row-gap: 24px; padding-bottom: 32px; }
+  .feature {
+    min-height: 0;
+    border-bottom: 5px solid transparent;
+    border-radius: 40px;
+  }
+}

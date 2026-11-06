@@ -1,6 +1,9 @@
 import PageLayout from "../components/PageLayout/PageLayout.jsx";
 import NewProjectButton from "../components/New Project Button/NewProjectButton.jsx";
 import ViewGalleryButton from "../components/View Gallery Button/ViewGalleryButton.jsx";
+import wordmark from "../assets/GitGallery-wordmark.svg";
+import watermark from "../assets/octocat-watermark.svg";
+import styles from "./Home.module.css";
 
 const FEATURES = [
   {
@@ -13,27 +16,36 @@ const FEATURES = [
   },
 ];
 
-function Home() {
-  return (
-    <PageLayout>
-      <div className="hero">
-        <h1 className="wordmark">GitGallery</h1>
-        <p className="tagline">The visual way to explore your Git history</p>
-        <div className="actions">
-          <NewProjectButton />
-          <ViewGalleryButton />
-        </div>
-      </div>
-      <div className="features">
-        {FEATURES.map((feature, index) => (
-          <div key={index} className="feature">
-            <h2 className="featureTitle">{feature.title}</h2>
-            <p className="featureText">{feature.text}</p>
+const Home = () => (
+  <PageLayout width="full">
+    <div className={styles.page}>
+      {/* decorative background mark, clipped by the right edge of the page */}
+      <img className={styles.watermark} src={watermark} alt="" aria-hidden="true" />
+
+      <div className={styles.content}>
+        <section className={styles.hero}>
+          <h1 className={styles.title}>
+            <img className={styles.wordmark} src={wordmark} alt="GitGallery" />
+          </h1>
+          <p className={styles.tagline}>Visual commit history for designers &amp; stakeholders</p>
+
+          <div className={styles.actions}>
+            <NewProjectButton />
+            <ViewGalleryButton />
           </div>
-        ))}
+        </section>
+
+        <section className={styles.features} aria-label="Features">
+          {FEATURES.map((f) => (
+            <article key={f.title} className={styles.feature}>
+              <h2 className={styles.featureTitle}>{f.title}</h2>
+              <p className={styles.featureText}>{f.text}</p>
+            </article>
+          ))}
+        </section>
       </div>
-    </PageLayout>
-  );
-}
+    </div>
+  </PageLayout>
+);
 
 export default Home;
