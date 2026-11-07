@@ -31,7 +31,7 @@ const NewProject = () => {
   // TODO: POST the project (url, title, selectedIds) to the backend, then navigate to the new project's id.
   useEffect(() => {
     if (step !== "creating") return;
-    const timer = setTimeout(() => navigate("/projects/personal-website"), 2000);
+    const timer = setTimeout(() => navigate("/projects/personal-website/timeline"), 2000);
     return () => clearTimeout(timer);
   }, [step, navigate]);
 

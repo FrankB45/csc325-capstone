@@ -1,0 +1,13 @@
+/* outer ratio matches the 808x466 (Standard) / 676x391 (Compare) frames in the design */
+.frame {
+  display: block;
+  width: 100%;
+  aspect-ratio: 173 / 100;
+  padding: 5px; /* gradient border */
+  border: none;
+  border-radius: var(--radius-lg);
+  background: var(--gradient-border);
+  overflow: hidden;
+  cursor: zoom-in;
+}
+.frame img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 11px; }

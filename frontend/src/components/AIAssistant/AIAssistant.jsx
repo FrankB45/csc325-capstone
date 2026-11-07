@@ -1,58 +1,65 @@
-import { useId, useState } from "react";
-import Button from "../AIAssistantButton.jsx";
+import { useEffect, useId, useRef, useState } from "react";
+import { useChat } from "../../hooks/useChat.js";
 import styles from "./AIAssistant.module.css";
 
-/** Collapsible assistant panel. `onAsk(question)` should return a promise of the answer text. */
+const GREETING = "Hi! Ask me what changed between commits, or which ones are worth highlighting.";
+
+/** Purple panel docked to the bottom-right; the header toggles it open. `onAsk(question)` -> Promise<string>. */
 const AIAssistant = ({ onAsk }) => {
   const [open, setOpen] = useState(false);
-  const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState("");
-  const [isAsking, setIsAsking] = useState(false);
   const panelId = useId();
+  const { messages, draft, setDraft, isSending, send } = useChat(onAsk, GREETING);
+  const logRef = useRef(null);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-    if (!question.trim() || isAsking) return;
-    setIsAsking(true);
-    try {
-      setAnswer(await onAsk(question.trim()));
-      setQuestion("");
-    } finally {
-      setIsAsking(false);
-    }
-  }
+  useEffect(() => {
+    const log = logRef.current;
+    if (log) log.scrollTop = log.scrollHeight;
+  }, [messages, open]);
 
   return (
-    <div className={styles.wrapper}>
-      {open && (
-        <section id={panelId} className={styles.panel} aria-label="AI Assistant">
-          <p className={styles.intro}>
-            Ask me about the visual changes between commits, or which commits to highlight for stakeholders.
-          </p>
-          {answer && <p className={styles.answer} role="status">{answer}</p>}
-          <form className={styles.form} onSubmit={handleSubmit}>
-            <input
-              className={styles.input}
-              type="text"
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              placeholder="What changed visually?"
-              aria-label="Question for the AI Assistant"
-            />
-            <Button type="submit" size="sm" loading={isAsking}>Ask</Button>
-          </form>
-        </section>
-      )}
-      <Button
-        variant="secondary"
-        size="md"
+    <section className={styles.dock} aria-label="AI Assistant">
+      <button
+        type="button"
+        className={styles.header}
         aria-expanded={open}
-        aria-controls={open ? panelId : undefined}
+        aria-controls={panelId}
         onClick={() => setOpen((o) => !o)}
       >
+        <span className={styles.dot} aria-hidden="true" />
         AI Assistant
-      </Button>
-    </div>
+      </button>
+
+      <div id={panelId} className={styles.body} hidden={!open}>
+        <div className={styles.log} ref={logRef} role="log" aria-live="polite">
+          {messages.map((m) => (
+            <p key={m.id} className={`${styles.bubble} ${m.role === "user" ? styles.user : ""}`}>{m.text}</p>
+          ))}
+        </div>
+        <form
+          className={styles.form}
+          onSubmit={(e) => {
+            e.preventDefault();
+            send();
+          }}
+        >
+          <input
+            className={styles.input}
+            type="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="What changed visually?"
+            aria-label="Question for the AI Assistant"
+          />
+          <button
+                    className={styles.submit}
+                    type="submit"
+                    disabled={isSending || !draft.trim()}
+                  >
+                    {isSending ? "Thinking…" : "Send"}
+                  </button>
+        </form>
+      </div>
+    </section>
   );
 };
 

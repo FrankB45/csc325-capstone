@@ -1,31 +1,40 @@
-.wrapper {
+.dock {
   position: fixed;
-  right: 24px;
-  bottom: 24px;
+  right: 15px;
+  bottom: 0;
   z-index: 50;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 12px;
-}
-.panel {
-  width: min(360px, calc(100vw - 48px));
-  padding: 20px;
-  border-radius: var(--radius-lg);
+  width: min(300px, calc(100vw - 30px));
+  overflow: hidden;
+  border-radius: 16px 16px 0 0;
   background: var(--color-purple);
   color: var(--color-white);
-  box-shadow: 0 8px 24px rgba(11, 37, 69, 0.3);
+  box-shadow: 0 -4px 20px rgba(11, 37, 69, 0.18);
 }
-.intro { margin: 0 0 12px; font-size: 14px; line-height: 1.5; }
-.answer { margin: 0 0 12px; padding: 10px; border-radius: var(--radius-sm); background: rgba(255, 255, 255, 0.15); font-size: 14px; }
-.form { display: flex; gap: 8px; }
-.input {
-  flex: 1;
-  min-width: 0;
-  padding: 0 12px;
-  height: 40px;
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 50px;
+  padding: 0 20px;
   border: none;
-  border-radius: var(--radius-sm);
-  font: inherit;
+  background: none;
+  font-family: var(--font-dm-sans);
   font-size: 14px;
+  font-weight: 700;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
 }
+.header:hover { background: rgba(255, 255, 255, 0.08); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-coral); }
+
+.body { border-top: 1px solid rgba(255, 255, 255, 0.1); }
+.log { display: flex; flex-direction: column; gap: 8px; max-height: 260px; padding: 14px 16px; overflow-y: auto; }
+.bubble { align-self: flex-start; max-width: 90%; margin: 0; padding: 12px; border-radius: var(--radius-md); background: rgba(255, 255, 255, 0.12); font-family: var(--font-dm-sans); font-size: 14px; line-height: 1.5; }
+.user { align-self: flex-end; background: var(--color-coral); }
+
+.form { display: flex; gap: 8px; padding: 12px 16px 16px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+.input { flex: 1; min-width: 0; height: 40px; padding: 0 12px; border: none; border-radius: var(--radius-sm); background: #d9d9d9; font: inherit; font-size: 14px; color: var(--color-navy); }
+.input::placeholder { color: var(--color-purple); }

@@ -36,7 +36,7 @@ const ProjectCard = ({ project }) => {
 
       {/* stays in the DOM while loading so the browser fetches it */}
       <Link
-        to={`/projects/${project.id}`}
+        to={`/projects/${project.id}/timeline`}
         className={styles.frameLink}
         aria-label={`Open ${project.name}`}
         hidden={imageStatus !== "loaded"}

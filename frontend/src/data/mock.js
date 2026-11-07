@@ -52,3 +52,7 @@ export const MOCK_COMMITS = MESSAGES.map((message, i) => ({
   date: new Date(2025, 0, 5 + i * 9).toISOString(),
   image: screenshot,
 }));
+
+export function getMockCommits(projectId) {
+  return MOCK_PROJECTS.some((project) => project.id === projectId) ? MOCK_COMMITS : [];
+}
