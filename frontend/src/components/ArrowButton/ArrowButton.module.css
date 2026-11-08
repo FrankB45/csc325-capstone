@@ -1,0 +1,7 @@
+.arrow { flex-shrink: 0; width: 37px; height: 62px; padding: 0; border: none; background: var(--color-coral); cursor: pointer; transition: background-color 200ms; }
+.left  { clip-path: polygon(100% 0, 0 50%, 100% 100%); }
+.right { clip-path: polygon(0 0, 100% 50%, 0 100%); }
+.arrow:hover:not(:disabled) { background: var(--color-light-coral); }
+/* outline would be clipped by the triangle, so focus changes the colour instead */
+.arrow:focus-visible { outline: none; background: var(--color-indigo); }
+.arrow:disabled { opacity: 0.4; cursor: default; }

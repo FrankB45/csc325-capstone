@@ -1,0 +1,21 @@
+.page {
+  position: relative;
+  overflow: hidden; /* clips the watermark at the page edge */
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.main {
+  position: relative;
+  z-index: 1; /* above the watermark */
+  flex: 1;
+  width: 100%;
+  margin: 0 auto;
+  padding: clamp(32px, 6vw, 80px) var(--page-gutter);
+}
+
+.narrow { max-width: 856px; }
+.wide   { max-width: var(--content-width); }
+.xwide  { max-width: 1440px; padding: clamp(32px, 5.3vw, 76px) clamp(20px, 2.8vw, 40px) 80px; }
+.full   { display: flex; flex-direction: column; max-width: none; padding: 0; }

@@ -1,0 +1,22 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 45px;
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--radius-md);
+  background-color: var(--color-coral);
+  color: var(--color-white);
+  font-family: var(--font-inter);
+  font-size: clamp(20px, 2vw, 28px);
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 300ms ease-out, color 300ms ease-out;
+}
+.button:hover:not(:disabled) { background-color: var(--color-light-coral); color: var(--color-purple); }
+.button:disabled { cursor: progress; }
+.icon { flex-shrink: 0; }
+.spinning { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }

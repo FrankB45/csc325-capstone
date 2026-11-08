@@ -1,0 +1,15 @@
+.button {
+  height: 41px;
+  padding: 0 16px;
+  border: none;
+  border-radius: var(--radius-md);
+  background-color: var(--color-coral);
+  color: var(--color-white);
+  font-family: var(--font-inter);
+  font-size: 24px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 300ms ease-out, color 300ms ease-out;
+}
+.button:hover { background-color: var(--color-light-coral); color: var(--color-purple); }

@@ -1,0 +1,49 @@
+.page { font-family: var(--font-dm-sans); color: var(--color-navy); }
+
+/* gradient-bordered surface (fill is a gradient layer because a plain colour is only valid on the last layer) */
+.gradientBox {
+  min-height: 312px;
+  --fill: #d9d9d9;
+  border: 5px solid transparent;
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(var(--fill), var(--fill)) padding-box,
+    var(--gradient-border) border-box;
+}
+
+.title { margin: 0 0 12px; font-size: 32px; font-weight: 700; line-height: 1.2; }
+.intro { max-width: 740px; margin: 0 0 32px; font-size: 16px; line-height: 1.65; color: var(--color-purple); }
+.heading { margin: 0 0 20px; font-size: 20px; font-weight: 700; }
+
+/* ---------- how it works ---------- */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 40px;
+  margin: 0 0 48px;
+  padding: 0;
+  list-style: none;
+}
+.step { min-height: 186px; padding: 22px 16px; transition: transform 200ms ease-out; }
+.step:hover { transform: scale(1.03); }
+.stepNumber { font-family: var(--font-dm-mono); font-size: 12px; color: var(--color-coral); }
+.stepTitle { margin: 8px 0 12px; font-size: 16px; font-weight: 700; }
+.stepText { margin: 0; font-size: 14px; line-height: 1.65; color: var(--color-purple); }
+
+/* ---------- faq ---------- */
+.faq { display: flex; flex-direction: column; gap: 9px; margin-bottom: 56px; }
+
+/* ---------- assistant ---------- */
+.assistantHeading { margin-bottom: 8px; }
+.sub { margin: 0 0 20px; font-size: 14px; color: var(--color-purple); }
+
+/* ---------- requirements ---------- */
+.requirements { --fill: var(--color-lightgray); margin-top: 40px; padding: 22px 16px 40px; }
+.reqTitle { margin: 0 0 12px; font-size: 14px; font-weight: 700; color: var(--color-purple); }
+.reqList { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.reqList li { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--color-purple); }
+.check { flex-shrink: 0; }
+
+@media (max-width: 760px) {
+  .steps { gap: 20px; }
+}

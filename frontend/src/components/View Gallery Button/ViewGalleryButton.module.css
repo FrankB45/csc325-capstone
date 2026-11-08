@@ -1,0 +1,39 @@
+@import "../../styles/global.css";
+
+.viewGalleryButton {
+  width: 272px;
+  height: 64px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0 24px;
+
+  border: none;
+  border-radius: 10px;
+
+  background-color: var(--color-purple);
+
+  cursor: pointer;
+
+  transition: background-color 300ms ease-out;
+}
+
+.viewGalleryText {
+  font-family: var(--font-inter);
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--color-white);
+
+  white-space: nowrap;
+}
+
+/* Hover variant */
+.viewGalleryButton:hover {
+  background-color: var(--color-light-purple);
+}
+
+.viewGalleryButton:hover .viewGalleryText {
+  color: var(--color-coral);
+}

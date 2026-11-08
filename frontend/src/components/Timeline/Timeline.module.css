@@ -1,0 +1,41 @@
+.wrapper { display: flex; align-items: flex-start; gap: 24px; padding: 0 18px; }
+.wrapper > button { margin-top: -4px; } /* centres the arrows on the line */
+
+.track { flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.track::-webkit-scrollbar { display: none; }
+
+.list { position: relative; display: flex; width: max-content; min-width: 100%; margin: 0; padding: 4px 0 8px; list-style: none; }
+
+/* every item draws its own piece of the line; the first/last start/end at their point */
+.item { position: relative; flex: 1 0 170px; }
+.item::before { content: ""; position: absolute; top: 20px; left: 0; right: 0; height: 6px; background: var(--color-navy); }
+.item:first-child::before { left: 50%; }
+.item:last-child::before { right: 50%; }
+
+.hit {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 4px 0 0;
+  border: none;
+  background: none;
+  font-family: var(--font-inter);
+  cursor: pointer;
+}
+
+.point {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--color-purple);
+  transition: transform 150ms, box-shadow 150ms, background-color 150ms;
+}
+.hit:hover .point { transform: scale(1.12); background: var(--color-light-purple); }
+.pointSelected,
+.hit:hover .pointSelected { background: var(--color-purple); box-shadow: 0 0 0 4px var(--color-surface), 0 0 0 8px var(--color-coral); }
+
+.label { display: flex; flex-direction: column; align-items: center; font-size: 20px; font-weight: 600; line-height: 1.2; color: var(--color-navy); }
