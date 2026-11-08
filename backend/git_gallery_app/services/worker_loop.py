@@ -42,12 +42,14 @@ def run_worker(poll_seconds=POLL_SECONDS, *, process=process_job,
                sleep=time.sleep, clock=time.monotonic, keep_running=lambda: True) -> None:
     """Process jobs forever. The keyword arguments exist so tests can control time."""
     logger.info("Worker started. Waiting for jobs... (Ctrl+C to stop)")
-    _recover()
-    last_recovery = clock()
+    last_recovery = None
 
     while keep_running():
         try:
-            if clock() - last_recovery >= RECOVERY_INTERVAL_SECONDS:
+            if (
+                last_recovery is None
+                or clock() - last_recovery >= RECOVERY_INTERVAL_SECONDS
+            ):
                 _recover()
                 last_recovery = clock()
 

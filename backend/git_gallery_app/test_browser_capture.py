@@ -5,11 +5,7 @@ from pathlib import Path
 from .capture.errors import CaptureError      # ".." versions if your tests are in tests/
 from .capture.server import serve_directory
 
-try:
-    from .capture.browser import screenshot_page
-    HAS_PLAYWRIGHT = True
-except ImportError:
-    HAS_PLAYWRIGHT = False
+from .capture.browser import screenshot_page
 
 
 def png_size(path):
@@ -23,7 +19,6 @@ def png_size(path):
     return width, height
 
 
-@unittest.skipUnless(HAS_PLAYWRIGHT, "Playwright is not installed")
 class ScreenshotPageTests(unittest.TestCase):
     def setUp(self):
         temp = tempfile.TemporaryDirectory()
