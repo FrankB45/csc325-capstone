@@ -69,10 +69,7 @@ export default function RepositoryValidation({ onProjectCreated }) {
                 },
                 body: JSON.stringify({
                     project_name: projectName,
-                    repository_owner: repository.owner,
-                    repository_name: repository.name,
                     repository_url: repository.url,
-                    analysis_status: "not_started",
                 }),
             })
             const data = await response.json()

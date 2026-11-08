@@ -45,7 +45,6 @@ def get_repository_information(repo_url: str) -> dict:
 
     return {
         "name": data["name"],
-        "owner": data["owner"]["login"],
         "full_name": data["full_name"],
         "description": data["description"],
         "default_branch": data["default_branch"],

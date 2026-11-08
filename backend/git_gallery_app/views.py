@@ -1,6 +1,3 @@
-from datetime import datetime, timezone
-from uuid import uuid4
-
 from django.shortcuts import get_object_or_404
 import logging
 
@@ -8,16 +5,14 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 import requests
-from .models import Project
-from .serializers import (
-    ProjectCreateSerializer,
-    ProjectStatusSerializer,
-    SavedAnalysisSerializer,
-)
-from .services.github import get_repository_information
+from .models import Job, Project
+from .serializers import ProjectCreateSerializer
+
+
 from .services.github import (
     get_repository_compatibility_report,
     get_repository_information,
+    parse_github_url,
 )
 
 logger = logging.getLogger(__name__)
@@ -69,18 +64,46 @@ def get_repository(request):
 
 
 def serialize_project(project):
+    # Read the repository owner and name from its saved GitHub URL.
+    try:
+        repository_owner, repository_name = parse_github_url(
+            project.repository_url
+        )
+    except ValueError:
+        # Keep the rest of the gallery available if an older project
+        # contains a URL that the parser doesn't recognize.
+        repository_owner = None
+        repository_name = None
+
+    # Get the IDs of this project's repository snapshots.
+    snapshot_ids = list(
+        project.repository_snapshots.values_list("pk", flat=True)
+    )
+
+    # Find the most recently created job for those snapshots.
+    latest_job = (
+        Job.objects.filter(repo_snapshot_id__in=snapshot_ids)
+        .order_by("-created_at", "-pk")
+        .first()
+    )
+
     return {
         "id": str(project.pk),
-        "project_name": project.project_name,
-        "repository_owner": project.repository_owner,
-        "repository_name": project.repository_name,
+        "project_name": project.name,
+        "repository_owner": repository_owner,
+        "repository_name": repository_name,
         "repository_url": project.repository_url,
-        "analysis_status": project.analysis_status,
-        "processed_versions": project.processed_versions,
-        "total_versions": project.total_versions,
-        "saved_analysis_count": len(project.saved_analyses or []),
         "created_at": project.created_at.isoformat(),
-        "updated_at": project.updated_at.isoformat(),
+        "latest_job": (
+            {
+                "id": str(latest_job.pk),
+                "status": latest_job.status,
+                "page_path": latest_job.page_path,
+                "created_at": latest_job.created_at.isoformat(),
+            }
+            if latest_job is not None
+            else None
+        ),
     }
 
 
@@ -107,58 +130,7 @@ def project_gallery(request):
     )
 
 
-@api_view(["GET", "PATCH"])
-def project_detail(request, project_id):
-    project = get_object_or_404(Project, pk=project_id)
 
-    if request.method == "GET":
-        return Response(serialize_project(project))
-
-    serializer = ProjectStatusSerializer(
-        project,
-        data=request.data,
-        partial=True,
-        context={"project": project},
-    )
-    if not serializer.is_valid():
-        return Response(
-            {"error": "Project status is invalid.", "details": serializer.errors},
-            status=400,
-        )
-
-    return Response(serialize_project(serializer.save()))
-
-
-@api_view(["GET", "POST"])
-def project_analyses(request, project_id):
-    project = get_object_or_404(Project, pk=project_id)
-
-    if request.method == "GET":
-        saved_analyses = project.saved_analyses or []
-        return Response({
-            "analyses": saved_analyses,
-            "count": len(saved_analyses),
-        })
-
-    serializer = SavedAnalysisSerializer(data=request.data)
-    if not serializer.is_valid():
-        return Response(
-            {"error": "Saved analysis is invalid.", "details": serializer.errors},
-            status=400,
-        )
-
-    analysis = {
-        "id": str(uuid4()),
-        **serializer.validated_data,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    }
-    project.saved_analyses = [*(project.saved_analyses or []), analysis]
-    project.analysis_status = analysis["analysis_status"]
-    project.processed_versions = analysis["processed_versions"]
-    project.total_versions = analysis["total_versions"]
-    project.save()
-
-    return Response(analysis, status=201)
 @api_view(["POST"])
 def check_repository_compatibility(request):
     """Return the existing compatibility report without enabling project setup."""
