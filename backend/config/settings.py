@@ -85,3 +85,5 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 
 USE_TZ = True
+# Where the worker saves screenshots. The database stores paths relative to this folder.
+SCREENSHOT_ROOT = BASE_DIR / "screenshots"
