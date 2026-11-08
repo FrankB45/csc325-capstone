@@ -114,7 +114,23 @@ def recover_stale_jobs(now=None) -> tuple[int, int]:
     requeued_count = failed_count = 0
     for job in stale_jobs:
         recover_job(job, now)
-        job.save(update_fields=["status", "captures", "error_message", "completed_at"])
+
+        updated_count = Job.objects.filter(
+            pk=job.pk,
+            status=Job.Status.PROCESSING,
+            heartbeat_at=job.heartbeat_at,
+            started_at=job.started_at,
+            attempts=job.attempts,
+        ).update(
+            status=job.status,
+            captures=job.captures,
+            error_message=job.error_message,
+            completed_at=job.completed_at,
+        )
+
+        if updated_count == 0:
+            continue
+
         if job.status == Job.Status.QUEUED:
             requeued_count += 1
         else:

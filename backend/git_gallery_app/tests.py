@@ -326,9 +326,14 @@ from datetime import timedelta
 
 from unittest.mock import Mock
 
-from .services.processing import process_job
+from .services.worker import process_job
 
-
+from .services.jobs import (
+    create_job,
+    claim_next_job,
+    recover_job,
+    recover_stale_jobs,
+)
 
 ##########
 # Tests for the Job functionality
@@ -502,19 +507,22 @@ class JobTests(TransactionTestCase):
         cases = [
             (
                 "all succeed",
-                ["first.png", "second.png"],
+                [{"ok": True}, {"ok": True}],
                 Job.Status.COMPLETE,
                 [Capture.Status.COMPLETE, Capture.Status.COMPLETE],
             ),
             (
                 "first fails but second succeeds",
-                [RuntimeError("Page missing"), "second.png"],
+                [{"ok": False, "error": "Page missing"}, {"ok": True}],
                 Job.Status.PARTIALLY_COMPLETE,
                 [Capture.Status.FAILED, Capture.Status.COMPLETE],
             ),
             (
                 "all fail",
-                [RuntimeError("Page missing"), RuntimeError("Timeout")],
+                [
+                    {"ok": False, "error": "Page missing"},
+                    {"ok": False, "error": "Timeout"},
+                ],
                 Job.Status.FAILED,
                 [Capture.Status.FAILED, Capture.Status.FAILED],
             ),
@@ -547,9 +555,54 @@ class JobTests(TransactionTestCase):
                 for capture, outcome in zip(saved_job.captures, outcomes):
                     self.assertIsNotNone(capture.completed_at)
 
-                    if isinstance(outcome, Exception):
-                        self.assertEqual(capture.error_message, str(outcome))
-                        self.assertEqual(capture.screenshot_path, "")
-                    else:
-                        self.assertEqual(capture.screenshot_path, outcome)
+                    if outcome["ok"]:
+                        expected_path = (
+                            f"{created_job.pk}/"
+                            f"{capture.position:02d}-{capture.commit_sha[:7]}.png"
+                        )
+                        self.assertEqual(capture.screenshot_path, expected_path)
                         self.assertEqual(capture.error_message, "")
+                    else:
+                        self.assertEqual(capture.error_message, outcome["error"])
+                        self.assertEqual(capture.screenshot_path, "")
+
+
+    def test_recovery_respects_a_new_heartbeat(self):
+        for heartbeat_changes in (False, True):
+            with self.subTest(heartbeat_changes=heartbeat_changes):
+                job = create_job(
+                    self.snapshot,
+                    "index.html",
+                    self.shas[:1],
+                )
+
+                stale_time = timezone.now() - timedelta(minutes=10)
+                Job.objects.filter(pk=job.pk).update(
+                    status=Job.Status.PROCESSING,
+                    started_at=stale_time,
+                    heartbeat_at=stale_time,
+                    attempts=1,
+                )
+
+                def decide_recovery(stale_job, now):
+                    if heartbeat_changes:
+                        Job.objects.filter(pk=stale_job.pk).update(
+                            heartbeat_at=now,
+                        )
+                    recover_job(stale_job, now)
+
+                with patch(
+                    "git_gallery_app.services.jobs.recover_job",
+                    side_effect=decide_recovery,
+                ):
+                    result = recover_stale_jobs()
+
+                job.refresh_from_db()
+
+                if heartbeat_changes:
+                    self.assertEqual(result, (0, 0))
+                    self.assertEqual(job.status, Job.Status.PROCESSING)
+                    self.assertGreater(job.heartbeat_at, stale_time)
+                else:
+                    self.assertEqual(result, (1, 0))
+                    self.assertEqual(job.status, Job.Status.QUEUED)
