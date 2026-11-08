@@ -1,5 +1,10 @@
 from ..models import RepositorySnapshot, Job, Capture
 from django.utils import timezone
+from datetime import timedelta
+
+from django.db.models import Q
+
+from .worker import final_status
 
 
 # After creating a project and selecting the commits you want processed into images, 
@@ -67,14 +72,73 @@ def claim_next_job() -> Job | None:
         if job is None:
             return None
 
+        now = timezone.now()
         updated_count = Job.objects.filter(
             pk=job.pk,
             status=Job.Status.QUEUED,
         ).update(
             status=Job.Status.PROCESSING,
-            started_at=timezone.now(),
+            started_at=now,
+            heartbeat_at=now,
+            attempts=job.attempts + 1,
         )
         if updated_count == 1:
             job.refresh_from_db()
             return job
         # If the job was not updated, it means another process claimed it
+
+##########
+# Used by the background worker when it starts (and every few minutes while it runs).
+# Finds PROCESSING jobs whose worker stopped sending heartbeats, and either
+# puts them back in the queue or, after too many attempts, gives up on them.
+
+# Must be comfortably longer than one capture can take (CAPTURE_TIMEOUT_SECONDS = 120),
+# because the heartbeat is only updated between captures.
+STALE_AFTER = timedelta(minutes=5)
+MAX_ATTEMPTS = 3
+GAVE_UP_MESSAGE = "Processing was interrupted repeatedly, so this commit was not captured."
+
+
+def recover_stale_jobs(now=None) -> tuple[int, int]:
+    """Requeue or fail abandoned jobs. Returns (requeued_count, failed_count)."""
+    now = now or timezone.now()
+    cutoff = now - STALE_AFTER
+
+    stale_jobs = Job.objects.filter(
+        Q(heartbeat_at__lt=cutoff)
+        # Jobs claimed before heartbeats existed only have started_at.
+        | Q(heartbeat_at__isnull=True, started_at__lt=cutoff),
+        status=Job.Status.PROCESSING,
+    )
+
+    requeued_count = failed_count = 0
+    for job in stale_jobs:
+        recover_job(job, now)
+        job.save(update_fields=["status", "captures", "error_message", "completed_at"])
+        if job.status == Job.Status.QUEUED:
+            requeued_count += 1
+        else:
+            failed_count += 1
+    return requeued_count, failed_count
+
+
+def recover_job(job: Job, now) -> None:
+    """Decide what happens to one abandoned job. Changes `job` in memory only."""
+    # A capture that was running when the worker died never finished.
+    for capture in job.captures:
+        if capture.status == Capture.Status.PROCESSING:
+            capture.status = Capture.Status.PENDING
+
+    if job.attempts < MAX_ATTEMPTS:
+        job.status = Job.Status.QUEUED
+        return
+
+    # Too many attempts: give up on what's left, but keep every finished screenshot.
+    for capture in job.captures:
+        if capture.status == Capture.Status.PENDING:
+            capture.status = Capture.Status.FAILED
+            capture.error_message = GAVE_UP_MESSAGE
+            capture.completed_at = now
+    job.status = final_status(job.captures)
+    job.error_message = f"Processing stopped after {job.attempts} interrupted attempts."
+    job.completed_at = now
