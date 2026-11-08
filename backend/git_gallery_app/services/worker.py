@@ -2,7 +2,9 @@ import json
 import logging
 import subprocess
 import sys
-from dataclasses import asdict
+from dataclasses import asdict, replace
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from django.conf import settings
 from django.utils import timezone
@@ -47,6 +49,29 @@ def final_status(captures: list[Capture]) -> str:
     return Job.Status.FAILED
 
 def run_capture_in_child(spec: CaptureSpec) -> dict:
+    """Own the workspace, run the child, and publish a successful screenshot."""
+    final_path = Path(spec.out_path).resolve()
+    final_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with TemporaryDirectory(prefix="capture-", dir=final_path.parent) as tmp:
+        temporary_image = Path(tmp) / "capture.png"
+        child_spec = replace(spec, out_path=str(temporary_image))
+
+        outcome = _run_capture_process(child_spec)
+        if not outcome["ok"]:
+            return outcome
+
+        if not temporary_image.is_file():
+            logger.error(
+                "Capture child for %s reported success without an image",
+                spec.sha,
+            )
+            return {"ok": False, "error": UNEXPECTED_ERROR}
+
+        temporary_image.replace(final_path)
+        return outcome
+
+def _run_capture_process(spec: CaptureSpec) -> dict:
     """Run one capture in a separate process. ALWAYS returns {"ok": ..., ...}.
 
     Turns every way the child can go wrong (hang, crash, garbage output)

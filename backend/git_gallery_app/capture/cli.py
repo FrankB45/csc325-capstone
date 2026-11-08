@@ -11,9 +11,7 @@ Must NOT import Django.
 """
 import contextlib
 import json
-import os
 import sys
-import tempfile
 from pathlib import Path
 
 from .browser import screenshot_page
@@ -24,34 +22,26 @@ from .spec import CaptureSpec
 
 
 def run_capture(spec: CaptureSpec) -> dict:
-    """Download, serve and screenshot one commit. Returns the result dict."""
+    """Capture into the temporary workspace supplied by the parent."""
     out_path = Path(spec.out_path)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Write to a temporary name first, then rename once it's complete (see notes).
-    # Keep ".png" at the end: Playwright picks the image format from the extension.
-    partial_path = out_path.with_name(f"{out_path.stem}.partial{out_path.suffix}")
+    source_dir = out_path.parent / "source"
+    source_dir.mkdir(parents=True)
 
     try:
-        with tempfile.TemporaryDirectory(prefix="gitgallery-") as tmp:
-            site = download_commit(spec.owner, spec.repo, spec.sha, tmp)
-            _check_page_exists(site, spec.page_path)
+        site = download_commit(spec.owner, spec.repo, spec.sha, source_dir)
+        _check_page_exists(site, spec.page_path)
 
-            with serve_directory(site) as base_url:
-                blocked_urls = screenshot_page(
-                    base_url,
-                    spec.page_path,
-                    partial_path,
-                    width=spec.width,
-                    height=spec.height,
-                    full_page=spec.full_page,
-                )
-        os.replace(partial_path, out_path)
+        with serve_directory(site) as base_url:
+            blocked_urls = screenshot_page(
+                base_url,
+                spec.page_path,
+                out_path,
+                width=spec.width,
+                height=spec.height,
+                full_page=spec.full_page,
+            )
     except CaptureError as error:
         return {"ok": False, "error": str(error)}
-    finally:
-        # After a success the partial file is already gone; after a failure, clean it up.
-        partial_path.unlink(missing_ok=True)
 
     return {"ok": True, "blocked_urls": blocked_urls}
 
