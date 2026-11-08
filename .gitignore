@@ -7,3 +7,8 @@ backend/mongo_migrations/__pycache__
 backend/git_gallery_app/services/__pycache__/__init__.cpython-314.pyc
 backend/git_gallery_app/services/__pycache__/github.cpython-314.pyc
 backend/screenshots/
+
+# Python bytecode and cache directories
+__pycache__/
+*.pyc
+*.pyo
