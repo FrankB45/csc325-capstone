@@ -142,3 +142,31 @@ def recover_job(job: Job, now) -> None:
     job.status = final_status(job.captures)
     job.error_message = f"Processing stopped after {job.attempts} interrupted attempts."
     job.completed_at = now
+
+
+##########
+# Used by the background worker when processing a job ends early.
+
+def release_job(job: Job) -> None:
+    """Put a job this worker was processing back in the queue (deliberate shutdown)."""
+    for capture in job.captures:
+        if capture.status == Capture.Status.PROCESSING:
+            capture.status = Capture.Status.PENDING
+    job.status = Job.Status.QUEUED
+    # A deliberate stop isn't a crash, so it shouldn't count toward MAX_ATTEMPTS.
+    job.attempts = max(job.attempts - 1, 0)
+    job.save(update_fields=["status", "captures", "attempts"])
+
+
+def fail_job(job: Job, message: str, now=None) -> None:
+    """Finish a job early because of an unexpected error, keeping finished screenshots."""
+    now = now or timezone.now()
+    for capture in job.captures:
+        if capture.status in (Capture.Status.PENDING, Capture.Status.PROCESSING):
+            capture.status = Capture.Status.FAILED
+            capture.error_message = message
+            capture.completed_at = now
+    job.status = final_status(job.captures)
+    job.error_message = message
+    job.completed_at = now
+    job.save(update_fields=["status", "captures", "error_message", "completed_at"])
