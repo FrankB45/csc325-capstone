@@ -17,6 +17,13 @@ from django.core.exceptions import ValidationError
 from .serializers import CreateAnalysisSerializer
 from .services.analysis_setup import AnalysisSetupError, start_analysis
 
+from bson import ObjectId
+from bson.errors import InvalidId
+
+from .models import Project
+from .services.projects import get_project_details
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -181,3 +188,15 @@ def check_repository_compatibility(request):
         {"error": "Could not complete the compatibility check. Try again."},
         status=500,
     )
+
+@api_view(["GET"])
+def get_project(request, project_id):
+    try:
+        project = Project.objects.get(pk=ObjectId(project_id))
+    except (InvalidId, Project.DoesNotExist):
+        return Response(
+            {"error": "Project not found."},
+            status=404,
+        )
+
+    return Response(get_project_details(project))
