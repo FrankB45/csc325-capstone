@@ -251,7 +251,11 @@ class _HomepageParser(HTMLParser):
         self.is_supported = False
 
 
-def check_repository_dependencies(repo_url: str) -> dict:
+def check_repository_dependencies(
+    repo_url: str,
+    *,
+    tree_sha: str | None = None,
+) -> dict:
     """Check the proposed declaration contract, passive profile and startup rule."""
     result = {
         "dependency_status": "pending",
@@ -266,18 +270,20 @@ def check_repository_dependencies(repo_url: str) -> dict:
         return result
 
     try:
-        repository = get_repository_information(repo_url)
-        default_branch = repository["default_branch"]
-        if default_branch is None:
-            result["reason"] = "There is no usable default branch to inspect for dependencies."
-            return result
-        if not isinstance(default_branch, str):
-            raise ValueError("GitHub returned invalid default-branch information.")
-        if not default_branch.strip():
-            result["reason"] = "There is no usable default branch to inspect for dependencies."
-            return result
+        if tree_sha is None:
+            repository = get_repository_information(repo_url)
+            default_branch = repository["default_branch"]
+            if default_branch is None:
+                result["reason"] = "There is no usable default branch to inspect for dependencies."
+                return result
+            if not isinstance(default_branch, str):
+                raise ValueError("GitHub returned invalid default-branch information.")
+            if not default_branch.strip():
+                result["reason"] = "There is no usable default branch to inspect for dependencies."
+                return result
 
-        tree_sha = _get_default_branch_tree_sha(owner, repo, default_branch)
+            tree_sha = _get_default_branch_tree_sha(owner, repo, default_branch)
+            
         result["tree_sha"] = tree_sha
         files = _get_snapshot_files(owner, repo, tree_sha)
         homepage_paths = []
