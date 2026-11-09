@@ -17,6 +17,67 @@
 
 **<u>User Experience / User Journey Video:</u>** https://www.youtube.com/watch?v=iYwazHIdx7U
 
+
+## CI/CD Pipeline
+
+Our GitHub Actions workflow is defined in
+`.github/workflows/git-gallery-cicd.yaml`. It runs when a pull request
+targets `main` and when commits are pushed to `main`.
+
+The `backend-tests` job:
+
+- Runs on Ubuntu with Python 3.14.
+- Starts a MongoDB 7.0 service with a health check.
+- Installs the backend requirements and Playwright Chromium with its
+  system dependencies.
+- Runs `python manage.py test git_gallery_app --verbosity 2 --noinput`.
+
+The job has a 10-minute timeout, caches Python dependencies, and uses
+read-only repository permissions.
+
+A separate `deploy` job depends on successful backend tests. Currently,
+it prints a deployment message as a placeholder; automated deployment
+is not implemented. Frontend tests and builds are not currently included
+in this workflow.
+
+## Branch Protection
+
+The active "Protect Main" ruleset protects the default branch, `main`.
+
+- Changes must go through a pull request.
+- Pull requests require at least one approving review.
+- The `backend-tests` GitHub Actions check must pass before merging.
+- Force pushes and branch deletion are blocked.
+- No bypass actors are configured.
+
+These rules require review and passing automated checks before changes
+enter the shared main branch.
+
+## AI Use Statement — Sprint 2
+
+We used ChatGPT and Codex to review the GitHub Actions workflow, explain
+configuration options, troubleshoot test failures, review background
+worker code, create a test repository, and draft documentation. We
+reviewed the suggestions and checked them against our code, test
+results, and GitHub configuration.
+
+One limitation of the initial AI-assisted workflow review was that
+checking the YAML and passing simple tests did not establish that the
+runner could support database-backed tests. The initial workflow did
+not start MongoDB. When database-backed tests ran, GitHub Actions failed
+while creating the test database with a connection-refused error for
+localhost:27017.
+
+We examined the failed run's logs and used AI to help interpret the
+error. We fixed the workflow by adding a MongoDB 7.0 service, exposing
+port 27017, and configuring a health check. Subsequent runs passed.
+
+As screenshot functionality was added, we also updated the workflow to
+install Playwright's Chromium browser and Linux dependencies. The latest
+verified worker PR run passed all 190 tests. We also manually tested
+analysis submission and background processing, confirming that a job
+completed with 10 successful captures and 10 saved PNG files.
+
 ## Architecture 
 
 - Git Gallery will use a Client/Server architecture, with a React Frontend that communicates with a Django REST API.  
