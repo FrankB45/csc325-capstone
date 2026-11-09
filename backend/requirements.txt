@@ -6,8 +6,12 @@ Django==6.0.9
 django-mongodb-backend==6.0.4
 djangorestframework==3.18.3
 dnspython==2.8.0
+greenlet==3.5.6
 idna==3.20
+playwright==1.64.1
+pyee==14.0.0
 pymongo==4.18.2
 requests==2.34.2
 sqlparse==0.6.0
+typing_extensions==4.16.0
 urllib3==2.8.0

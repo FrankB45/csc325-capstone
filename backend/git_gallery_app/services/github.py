@@ -52,7 +52,11 @@ def get_repository_information(repo_url: str) -> dict:
     }
 
 
-def get_commit_history(repo_url: str) -> list[dict]:
+def get_commit_history(
+    repo_url: str,
+    *,
+    ref: str | None = None,
+) -> list[dict]:
     """Commits on the default branch, ordered oldest -> newest.
 
     Each item: {"sha": <full 40-char sha>, "message": <first line>, "date": <ISO str>}.
@@ -61,11 +65,14 @@ def get_commit_history(repo_url: str) -> list[dict]:
     """
     owner, repo = parse_github_url(repo_url)
 
+    params = {"per_page": MAX_HISTORY_COMMITS + 1}
+    if ref is not None:
+        params["sha"] = ref
+
     response = requests.get(
         f"https://api.github.com/repos/{owner}/{repo}/commits",
         headers={"Accept": "application/vnd.github+json"},
-        # One extra so we can tell "exactly 50" from "more than 50".
-        params={"per_page": MAX_HISTORY_COMMITS + 1},
+        params=params,
         timeout=10,
     )
 
@@ -87,6 +94,7 @@ def get_commit_history(repo_url: str) -> list[dict]:
             "sha": item["sha"],
             "message": item["commit"]["message"].splitlines()[0] if item["commit"]["message"] else "",
             "date": item["commit"]["author"]["date"],
+            "author_name": item["commit"]["author"]["name"] or "Unknown author",
         }
         for item in reversed(items)
     ]
@@ -441,3 +449,37 @@ def get_repository_compatibility_report(repo_url: str) -> dict:
         # Each check resolves the default branch independently.
         "same_snapshot_guaranteed": False,
     }
+
+def get_branch_revision(repo_url: str, branch: str) -> dict:
+    if not isinstance(branch, str) or not branch.strip():
+        raise ValueError("The repository has no usable default branch.")
+
+    owner, repo = parse_github_url(repo_url)
+    reference = quote(f"heads/{branch}", safe="")
+
+    response = requests.get(
+        f"https://api.github.com/repos/{owner}/{repo}/commits/{reference}",
+        headers={"Accept": "application/vnd.github+json"},
+        timeout=10,
+    )
+
+    if response.status_code == 409:
+        raise ValueError("Repository has no commits.")
+
+    response.raise_for_status()
+    data = response.json()
+
+    revision = {
+        "head_sha": data["sha"],
+        "tree_sha": data["commit"]["tree"]["sha"],
+    }
+
+    for sha in revision.values():
+        if (
+            not isinstance(sha, str)
+            or len(sha) != 40
+            or any(character not in "0123456789abcdef" for character in sha)
+        ):
+            raise ValueError("GitHub returned an invalid revision identifier.")
+
+    return revision

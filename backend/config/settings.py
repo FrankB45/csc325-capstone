@@ -85,3 +85,20 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 
 USE_TZ = True
+# Where the worker saves screenshots. The database stores paths relative to this folder.
+SCREENSHOT_ROOT = BASE_DIR / "screenshots"
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "simple": {"format": "{asctime} {levelname} {name}: {message}", "style": "{"},
+    },
+    "handlers": {
+        "console": {"class": "logging.StreamHandler", "formatter": "simple"},
+    },
+    "loggers": {
+        # Everything under git_gallery_app.*, including the worker, at INFO and above.
+        "git_gallery_app": {"handlers": ["console"], "level": "INFO"},
+    },
+}

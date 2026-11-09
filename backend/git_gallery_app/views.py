@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 import logging
 
 from rest_framework.decorators import api_view
@@ -7,12 +6,16 @@ from rest_framework.response import Response
 import requests
 
 from .commit_selection import SelectionError, default_selection, validate_selection
-from .services.analyses import save_analysis
 from .services.github import get_commit_history, get_repository_information
 from .services.github import (
     get_repository_compatibility_report,
     get_repository_information,
 )
+
+from django.core.exceptions import ValidationError
+
+from .serializers import CreateAnalysisSerializer
+from .services.analysis_setup import AnalysisSetupError, start_analysis
 
 logger = logging.getLogger(__name__)
 
@@ -108,41 +111,42 @@ def get_commits(request):
 
 @api_view(["POST"])
 def create_analysis(request):
-    if not isinstance(request.data, dict):
-        return Response({"error": "Send a JSON object."}, status=400)
+    serializer = CreateAnalysisSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
 
-    url = request.data.get("url")
-    page_path = request.data.get("page_path")
-    selected = request.data.get("commit_shas")
+    try:
+        job = start_analysis(**serializer.validated_data)
 
-    if not url or not page_path:
+    except SelectionError as error:
         return Response(
-            {"error": "url and page_path are required."},
+            {"error": error.message, "code": error.code},
             status=400,
         )
 
-    try:
-        history = get_commit_history(url)
+    except AnalysisSetupError as error:
+        return Response(
+            {"error": str(error)},
+            status=error.status_code,
+        )
+
+    except ValidationError as error:
+        return Response({"error": error.messages}, status=400)
+
     except (requests.RequestException, ValueError) as error:
         return _github_error(error)
 
-    # Must be 1-10 distinct commits that belong to this repository's history.
-    try:
-        ordered = validate_selection(selected, [c["sha"] for c in history])
-    except SelectionError as error:
-        return Response({"error": error.message, "code": error.code}, status=400)
+    return Response(
+        {
+            "job_id": str(job.pk),
+            "project_id": str(job.repo_snapshot.project_id),
+            "snapshot_id": str(job.repo_snapshot_id),
+            "status": job.status,
+            "total_captures": len(job.captures),
+        },
+        status=202,
+    )
 
-    # Snapshot of the exact full SHAs and their metadata, copied now, so later
-    # changes to the repository never alter this analysis.
-    by_sha = {c["sha"]: c for c in history}
-    snapshot = {
-        "url": url,
-        "page_path": page_path,
-        "commits": [by_sha[sha] for sha in ordered],
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    }
-
-    return Response(save_analysis(snapshot), status=201)
+    
 @api_view(["POST"])
 def check_repository_compatibility(request):
     """Return the compatibility report and its limited-MVP setup decision."""
