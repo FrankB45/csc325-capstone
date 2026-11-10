@@ -2,6 +2,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  overflow-anchor: none;
   padding: 0 clamp(12px, 2.1vw, 30px) 28px;
   /* soft lilac wash towards the bottom, as in the design */
   background: linear-gradient(180deg, transparent 0%, transparent 62%, rgba(142, 108, 136, 0.2) 100%);
@@ -15,7 +16,7 @@
 .syncText { margin: 0; font-size: 18px; color: var(--color-navy); }
 
 /* preview area: centered between the header row and the timeline */
-.stage { flex: 1; display: flex; align-items: center; justify-content: center; padding: 28px 0; }
+.stage { flex: 1; display: flex; align-items: flex-start; justify-content: center; padding: 28px 0; }
 .single { width: min(808px, 100%); }
 .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 27px; width: 100%; max-width: 1377px; }
 
@@ -24,5 +25,5 @@
 @media (max-width: 800px) {
   .pair { grid-template-columns: minmax(0, 1fr); }
   .sync { align-items: flex-start; }
-  .modeRow { padding-bottom: 56px; } /* room for the docked assistant */
+  .modeRow { padding-bottom: 56px; padding-left: 8px; }
 }

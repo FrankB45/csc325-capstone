@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useProject } from "../hooks/useProject.js";
 import { Link, useParams } from "react-router-dom";
 import PageLayout from "../components/PageLayout/PageLayout.jsx";
@@ -24,6 +24,7 @@ const ProjectTimelineView = ({ project, commits }) => {
   });  
   const [activeSlot, setActiveSlot] = useState(null);
   const [overlayCommit, setOverlayCommit] = useState(null);
+  const modeRowRef = useRef(null);
 
   // Compare slots stay fixed: 1 is left and 2 is right.
   const shownIds = mode === "standard" ? picks.filter(Boolean).slice(-1) : picks.filter(Boolean);
@@ -33,9 +34,16 @@ const ProjectTimelineView = ({ project, commits }) => {
     : {};
 
   function handleModeChange(next) {
+    const previousTop = modeRowRef.current?.getBoundingClientRect().top;
     setMode(next);
     setActiveSlot(null);
     if (next === "standard") setPicks((p) => [p.filter(Boolean).at(-1) ?? null, null]);
+    if (previousTop !== undefined) {
+      requestAnimationFrame(() => {
+        const nextTop = modeRowRef.current?.getBoundingClientRect().top;
+        if (nextTop !== undefined) window.scrollBy(0, nextTop - previousTop);
+      });
+    }
   }
 
   function handleSelect(id) {
@@ -133,7 +141,7 @@ const ProjectTimelineView = ({ project, commits }) => {
           onAssignSlot={setActiveSlot}
         />
 
-        <div className={styles.modeRow}>
+        <div ref={modeRowRef} className={styles.modeRow}>
           <ModeToggle value={mode} onChange={handleModeChange} />
         </div>
 

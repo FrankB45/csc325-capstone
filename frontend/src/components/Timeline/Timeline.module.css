@@ -4,13 +4,15 @@
 .track { flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
 .track::-webkit-scrollbar { display: none; }
 
-.list { position: relative; display: flex; width: max-content; min-width: 100%; margin: 0; padding: 4px 0 8px; list-style: none; }
+.list { position: relative; display: flex; justify-content: space-between; width: max-content; min-width: 100%; margin: 0; padding: 4px 0 8px; list-style: none; }
 
 /* every item draws its own piece of the line; the first/last start/end at their point */
-.item { position: relative; flex: 1 0 170px; }
+.item { position: relative; flex: 0 0 170px; }
+.item:first-child,
+.item:last-child { flex-basis: 60px; }
 .item::before { content: ""; position: absolute; top: 20px; left: 0; right: 0; height: 6px; background: var(--color-navy); }
 .item:first-child::before { left: 50%; }
-.item:last-child::before { right: 50%; }
+.item:last-child::before { right: calc(50% - 19px); }
 
 .hit {
   position: relative;
