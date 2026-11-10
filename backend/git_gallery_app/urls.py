@@ -1,7 +1,7 @@
 # Add API routes here. They are served under /api/.
 
 from django.urls import path
-from .views import hello_world, get_repository, check_repository_compatibility, get_commits, create_analysis, get_project, get_capture_image
+from .views import hello_world, get_repository, check_repository_compatibility, get_commits, create_analysis, get_project, get_capture_image, get_projects
 
 urlpatterns = [
     path("hello/", hello_world, name="hello-world"),
@@ -19,4 +19,5 @@ urlpatterns = [
         check_repository_compatibility,
         name="check-repository-compatibility",
     ),
+    path("projects/", get_projects, name="get-projects"),
 ]

@@ -21,7 +21,7 @@ from bson import ObjectId
 from bson.errors import InvalidId
 
 from .models import Project, Capture, Job
-from .services.projects import get_project_details
+from .services.projects import get_project_details, get_project_summaries
 
 from pathlib import Path
 
@@ -244,3 +244,10 @@ def get_capture_image(request, job_id, position):
         image_file,
         content_type="image/png",
     )
+
+@api_view(["GET"])
+def get_projects(request):
+    return Response({
+        "projects": get_project_summaries(),
+    })
+

@@ -1,19 +1,35 @@
-import { useCallback, useId, useState } from "react";
+import { useId, useState } from "react";
 import { Link } from "react-router-dom";
 import DetailsButton from "../DetailsButton/DetailsButton.jsx";
 import LoadingDots from "../LoadingDots/LoadingDots.jsx";
 import { formatDate } from "../../utils/format.js";
 import styles from "./ProjectCard.module.css";
 
+const ProjectThumbnail = ({ url }) => {
+  const [failed, setFailed] = useState(false);
+
+  if (!url || failed) {
+    return (
+      <span className={styles.frame + " " + styles.fallback}>
+        Preview unavailable — open project
+      </span>
+    );
+  }
+
+  return (
+    <span className={styles.frame}>
+      <img
+        src={url}
+        alt=""
+        onError={() => setFailed(true)}
+      />
+    </span>
+  );
+};
+
 const ProjectCard = ({ project }) => {
   const [open, setOpen] = useState(false);
-  const [imageStatus, setImageStatus] = useState("loading"); // "loading" | "loaded" | "error"
   const detailsId = useId();
-
-  // covers images that finished loading before React attached onLoad (cache)
-  const imgRef = useCallback((img) => {
-    if (img?.complete && img.naturalWidth > 0) setImageStatus("loaded");
-  }, []);
 
   return (
     <article className={styles.card}>
@@ -21,43 +37,45 @@ const ProjectCard = ({ project }) => {
         <h2 className={styles.name}>{project.name}</h2>
         <p className={styles.meta}>Last modified: {formatDate(project.lastModified)}</p>
         <p className={styles.meta}># of Commits: {project.commitCount}</p>
+        <p className={styles.meta}>
+          Status: {project.status.replaceAll("_", " ")}
+        </p>
+        <p className={styles.meta}>
+          {project.progress.processed} / {project.progress.total} processed
+          {" · "}
+          {project.progress.failed} failed
+        </p>
       </div>
 
-      {imageStatus === "loading" && (
-        <div className={styles.loadingSlot}>
-          <div className={styles.loadingBox}>
-            <LoadingDots label={`Loading preview of ${project.name}`} />
-          </div>
-        </div>
-      )}
-      {imageStatus === "error" && (
-        <div className={`${styles.frame} ${styles.fallback}`}>Preview unavailable</div>
-      )}
-
-      {/* stays in the DOM while loading so the browser fetches it */}
       <Link
         to={`/projects/${project.id}/timeline`}
         className={styles.frameLink}
         aria-label={`Open ${project.name}`}
-        hidden={imageStatus !== "loaded"}
       >
-        <span className={styles.frame}>
-          <img
-            ref={imgRef}
-            src={project.thumbnail}
-            alt=""
-            onLoad={() => setImageStatus("loaded")}
-            onError={() => setImageStatus("error")}
-          />
-        </span>
+        <ProjectThumbnail
+          key={project.thumbnail || "no-thumbnail"}
+          url={project.thumbnail}
+        />
       </Link>
 
       <div className={styles.details}>
         <DetailsButton expanded={open} controls={detailsId} onClick={() => setOpen((o) => !o)} />
         {open && (
-          <p id={detailsId} className={styles.description}>
-            {project.description || "The description wasn’t added."}
-          </p>
+          <div id={detailsId} className={styles.description}>
+            <a
+              href={project.repository_url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {project.repository_url}
+            </a>
+
+            {project.page_path && (
+              <p>
+                Page: <code>{project.page_path}</code>
+              </p>
+            )}
+          </div>
         )}
       </div>
     </article>
