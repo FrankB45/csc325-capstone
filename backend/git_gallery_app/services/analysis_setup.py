@@ -19,7 +19,7 @@ class AnalysisSetupError(ValueError):
         self.status_code = status_code
 
 
-def start_analysis(url, page_path, commit_shas):
+def start_analysis(url, page_path, commit_shas, name=""):
     repository = get_repository_information(url)
     url = repository["url"]
     owner, repo = parse_github_url(url)
@@ -81,7 +81,7 @@ def start_analysis(url, page_path, commit_shas):
         commit.full_clean()
 
     project = Project(
-        name=repository["name"],
+        name=name or repository["name"],
         repository_url=url,
     )
     project.full_clean()

@@ -17,6 +17,18 @@ from django.core.exceptions import ValidationError
 from .serializers import CreateAnalysisSerializer
 from .services.analysis_setup import AnalysisSetupError, start_analysis
 
+from bson import ObjectId
+from bson.errors import InvalidId
+
+from .models import Project, Capture, Job
+from .services.projects import get_project_details, get_project_summaries
+
+from pathlib import Path
+
+from django.conf import settings
+from django.http import FileResponse, Http404
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -181,3 +193,61 @@ def check_repository_compatibility(request):
         {"error": "Could not complete the compatibility check. Try again."},
         status=500,
     )
+
+@api_view(["GET"])
+def get_project(request, project_id):
+    try:
+        project = Project.objects.get(pk=ObjectId(project_id))
+    except (InvalidId, Project.DoesNotExist):
+        return Response(
+            {"error": "Project not found."},
+            status=404,
+        )
+
+    return Response(get_project_details(project))
+
+@api_view(["GET"])
+def get_capture_image(request, job_id, position):
+    try:
+        job = Job.objects.get(pk=ObjectId(job_id))
+    except (InvalidId, Job.DoesNotExist):
+        raise Http404("Job not found.")
+
+    capture = next(
+        (
+            item
+            for item in job.captures
+            if item.position == position
+        ),
+        None,
+    )
+
+    if (
+        capture is None
+        or capture.status != Capture.Status.COMPLETE
+        or not capture.screenshot_path
+    ):
+        raise Http404("Screenshot not available.")
+
+    root = Path(settings.SCREENSHOT_ROOT).resolve()
+    image_path = (root / capture.screenshot_path).resolve()
+
+    if not image_path.is_relative_to(root):
+        raise Http404("Screenshot not available.")
+
+    try:
+        image_file = image_path.open("rb")
+    except (FileNotFoundError, IsADirectoryError):
+        raise Http404("Screenshot file not found.")
+
+    return FileResponse(
+        image_file,
+        content_type="image/png",
+    )
+
+@api_view(["GET"])
+def get_projects(request):
+    return Response({
+        "projects": get_project_summaries(),
+    })
+

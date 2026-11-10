@@ -32,3 +32,11 @@
 .barName { width: 60%; height: 32px; }
 .barMeta { width: 45%; height: 18px; margin-top: 8px; }
 @keyframes pulse { 50% { opacity: 0.3; } }
+
+.frameLink .fallback {
+  margin-top: 0;
+}
+
+.description a {
+  overflow-wrap: anywhere;
+}

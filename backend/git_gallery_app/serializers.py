@@ -14,3 +14,11 @@ class CreateAnalysisSerializer(serializers.Serializer):
         min_length=1,
         max_length=10,
     )
+
+    name = serializers.CharField(
+        max_length=200,
+        required=False,
+        allow_blank=True,
+        trim_whitespace=True,
+    )
+
