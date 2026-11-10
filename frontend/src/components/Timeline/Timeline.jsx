@@ -7,7 +7,7 @@ import styles from "./Timeline.module.css";
  * Horizontal commit timeline: a line with one point per commit, date + short SHA underneath.
  * Commits must be ordered oldest -> newest. The arrows scroll the track when there are more commits than fit.
  */
-const Timeline = ({ commits, selectedIds, onSelect }) => {
+const Timeline = ({ commits, selectedIds, slotById, activeSlot, comparisonMode, onSelect, onAssignSlot }) => {
   const trackRef = useRef(null);
   const [edges, setEdges] = useState({ atStart: true, atEnd: true });
 
@@ -47,16 +47,27 @@ const Timeline = ({ commits, selectedIds, onSelect }) => {
         <ol className={styles.list} aria-label="Commit timeline">
           {commits.map((commit) => {
             const selected = selectedIds.includes(commit.id);
+            const slot = slotById[commit.id];
             return (
               <li key={commit.id} className={styles.item}>
                 <button
                   type="button"
-                  className={styles.hit}
+                  className={`${styles.hit} ${comparisonMode && !slot ? styles.hitNoHover : ""} ${comparisonMode && !slot && activeSlot ? styles.hitPickable : ""}`}
                   aria-pressed={selected}
-                  aria-label={`Select commit ${commit.sha.slice(0, 7)}: ${commit.message}`}
-                  onClick={() => onSelect(commit.id)}
+                  aria-label={slot
+                    ? `Comparison ${slot}, ${slot === 1 ? "left" : "right"}: commit ${commit.sha.slice(0, 7)}. Click to choose this comparison, or select another commit while it is active.`
+                    : `Select commit ${commit.sha.slice(0, 7)}: ${commit.message}`}
+                  onClick={() => {
+                    if (slot && !activeSlot) {
+                      onAssignSlot(slot);
+                    } else {
+                      onSelect(commit.id);
+                    }
+                  }}
                 >
-                  <span className={`${styles.point} ${selected ? styles.pointSelected : ""}`} />
+                  <span className={`${styles.point} ${selected ? styles.pointSelected : ""} ${activeSlot === slot ? styles.pointActive : ""}`}>
+                    {slot}
+                  </span>
                   <span className={styles.label}>
                     <time dateTime={commit.date}>{formatShortDate(commit.date)}</time>
                     <span>({commit.sha.slice(0, 7)})</span>

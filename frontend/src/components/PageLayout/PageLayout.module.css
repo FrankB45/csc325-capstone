@@ -13,4 +13,9 @@
 
 .narrow { max-width: 856px; }
 .wide   { max-width: var(--content-width); }
+.timeline {
+  padding-top: 8px;
+  padding-bottom: 0;
+  background: linear-gradient(180deg, transparent 0%, transparent 62%, rgba(142, 108, 136, 0.2) 100%);
+}
 .full   { display: flex; flex-direction: column; max-width: none; padding: 0; }

@@ -17,7 +17,7 @@
   transition: transform 200ms ease-out;
 }
 .frameLink:hover .frame { transform: scale(1.02); }
-.frame img { display: block; width: 100%; aspect-ratio: 420 / 238; object-fit: cover; border-radius: 11px; }
+.frame img { display: block; width: 100%; aspect-ratio: 420 / 238; object-fit: cover; object-position: top; border-radius: 11px; }
 .fallback { display: grid; place-items: center; margin-top: 38px; aspect-ratio: 440 / 258; background: var(--color-lightgray); color: var(--color-purple); font-size: 18px; }
 
 /* thumbnail loading: coral box with dots, top-left like the design */

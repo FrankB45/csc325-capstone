@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useProject } from "../hooks/useProject.js";
 import { Link, useParams } from "react-router-dom";
 import PageLayout from "../components/PageLayout/PageLayout.jsx";
@@ -12,6 +12,14 @@ import CommitOverlay from "../components/CommitOverlay/CommitOverlay.jsx";
 import AIAssistant from "../components/AIAssistant/AIAssistant.jsx";
 import styles from "./ProjectTimeline.module.css";
 
+const loadScreenshot = (src) => new Promise((resolve, reject) => {
+  const image = new Image();
+  image.onload = () => resolve(image);
+  image.onerror = () => reject(new Error("A screenshot could not be loaded."));
+  image.crossOrigin = "anonymous";
+  image.src = src;
+});
+
 const ProjectTimelineView = ({ project, commits }) => {
   const analysis = project.analysis;
   const [mode, setMode] = useState("standard"); // "standard" | "compare"
@@ -19,40 +27,98 @@ const ProjectTimelineView = ({ project, commits }) => {
     const latestCaptured = commits.filter((commit) => commit.image).at(-1);
 
     return latestCaptured
-      ? [latestCaptured.id]
-      : commits.slice(0, 1).map((commit) => commit.id);
+      ? [latestCaptured.id, null]
+      : [commits[0]?.id ?? null, null];
   });  
-  const [isPicking, setIsPicking] = useState(false); // Compare: "Add Commit" was pressed
+  const [activeSlot, setActiveSlot] = useState(null);
   const [overlayCommit, setOverlayCommit] = useState(null);
+  const [downloadError, setDownloadError] = useState("");
+  const modeRowRef = useRef(null);
 
-  // Standard shows the latest pick, Compare the latest two (kept in timeline order)
-  const shownIds = mode === "standard" ? picks.slice(-1) : picks.slice(-2);
-  const shown = commits.filter((c) => shownIds.includes(c.id));
+  // Compare slots stay fixed: 1 is left and 2 is right.
+  const shownIds = mode === "standard" ? picks.filter(Boolean).slice(-1) : picks.filter(Boolean);
+  const shown = shownIds.map((id) => commits.find((commit) => commit.id === id)).filter(Boolean);
+  const slotById = mode === "compare"
+    ? Object.fromEntries(picks.flatMap((id, index) => id ? [[id, index + 1]] : []))
+    : {};
 
   function handleModeChange(next) {
+    const previousTop = modeRowRef.current?.getBoundingClientRect().top;
     setMode(next);
-    setIsPicking(false);
-    if (next === "standard") setPicks((p) => p.slice(-1));
+    setActiveSlot(null);
+    if (next === "standard") setPicks((p) => [p.filter(Boolean).at(-1) ?? null, null]);
+    if (previousTop !== undefined) {
+      requestAnimationFrame(() => {
+        const nextTop = modeRowRef.current?.getBoundingClientRect().top;
+        if (nextTop !== undefined) window.scrollBy(0, nextTop - previousTop);
+      });
+    }
   }
 
   function handleSelect(id) {
-    setIsPicking(false);
     if (mode === "standard") {
-      setPicks([id]);
+      setPicks([id, null]);
       return;
     }
+    if (!activeSlot) return;
+
+    const targetIndex = activeSlot - 1;
     setPicks((prev) => {
-      if (prev.includes(id)) return prev.length > 1 ? prev.filter((x) => x !== id) : prev;
-      return [...prev, id].slice(-2);
+      const next = [...prev];
+      const otherIndex = 1 - targetIndex;
+      if (next[otherIndex] === id) {
+        if (!next[targetIndex]) return prev;
+        next[otherIndex] = next[targetIndex];
+      }
+      next[targetIndex] = id;
+      return next;
     });
+    setActiveSlot(null);
   }
 
-  // Downloads the screenshot(s) currently on screen.
-  function handleDownload() {
-    shown.filter((commit) => commit.image).forEach((c) => {
+  async function handleDownload() {
+    setDownloadError("");
+    const screenshots = shown.filter((commit) => commit.image);
+
+    if (mode === "compare") {
+      try {
+        const [left, right] = await Promise.all(screenshots.map((commit) => loadScreenshot(commit.image)));
+        const gap = 16;
+        const canvas = document.createElement("canvas");
+        canvas.width = left.naturalWidth + gap + right.naturalWidth;
+        canvas.height = Math.max(left.naturalHeight, right.naturalHeight);
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("Could not create the comparison image.");
+        context.fillStyle = "#fefeff";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(left, 0, 0);
+        context.drawImage(right, left.naturalWidth + gap, 0);
+
+        const blob = await new Promise((resolve, reject) => {
+          canvas.toBlob((result) => {
+            if (result) resolve(result);
+            else reject(new Error("Could not export the comparison image."));
+          }, "image/png");
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${project.id}-comparison.png`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch (error) {
+        console.error("Could not download the comparison screenshot.", error);
+        setDownloadError("Could not create the comparison download. Please try again.");
+      }
+      return;
+    }
+
+    screenshots.forEach((commit) => {
       const link = document.createElement("a");
-      link.href = c.image;
-      link.download = `${project.id}-${c.sha}.png`;
+      link.href = commit.image;
+      link.download = `${project.id}-${commit.sha}.png`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -83,11 +149,14 @@ const ProjectTimelineView = ({ project, commits }) => {
               <h1 className={styles.title}>{project.name}</h1>
 
               <DownloadButton
-                label="Download screenshots"
+                label={mode === "compare" ? "Download comparison" : "Download screenshots"}
                 onClick={handleDownload}
-                disabled={!shown.some((commit) => commit.image)}
+                disabled={mode === "compare"
+                  ? shown.length !== 2 || shown.some((commit) => !commit.image)
+                  : !shown.some((commit) => commit.image)}
               />
             </div>
+            {downloadError && <p role="alert">{downloadError}</p>}
           </div>
         </div>
 
@@ -101,14 +170,27 @@ const ProjectTimelineView = ({ project, commits }) => {
               {shown.map((c) => (
                 <CommitPreview key={c.id} commit={c} onOpen={setOverlayCommit} />
               ))}
-              {shown.length < 2 && <EmptyCommitSlot isPicking={isPicking} onAdd={() => setIsPicking(true)} />}
+              {shown.length < 2 && (
+                <EmptyCommitSlot
+                  isPicking={activeSlot === 2}
+                  onAdd={() => setActiveSlot(2)}
+                />
+              )}
             </div>
           )}
         </section>
 
-        <Timeline commits={commits} selectedIds={shownIds} onSelect={handleSelect} />
+        <Timeline
+          commits={commits}
+          selectedIds={shownIds}
+          slotById={slotById}
+          activeSlot={activeSlot}
+          comparisonMode={mode === "compare"}
+          onSelect={handleSelect}
+          onAssignSlot={setActiveSlot}
+        />
 
-        <div className={styles.modeRow}>
+        <div ref={modeRowRef} className={styles.modeRow}>
           <ModeToggle value={mode} onChange={handleModeChange} />
         </div>
 
@@ -178,4 +260,3 @@ const ProjectTimeline = () => {
 };
 
 export default ProjectTimeline;
-
