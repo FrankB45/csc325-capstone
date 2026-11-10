@@ -13,4 +13,5 @@
 
 .narrow { max-width: 856px; }
 .wide   { max-width: var(--content-width); }
+.timeline { padding-top: 8px; }
 .full   { display: flex; flex-direction: column; max-width: none; padding: 0; }
