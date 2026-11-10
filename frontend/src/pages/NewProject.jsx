@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PageLayout from "../components/PageLayout/PageLayout.jsx";
 import NextButton from "../components/NextButton/NextButton.jsx";
@@ -6,47 +6,202 @@ import CancelButton from "../components/CancelButton/CancelButton.jsx";
 import Spinner from "../components/Spinner/Spinner.jsx";
 import CommitPicker from "../components/CommitPicker/CommitPicker.jsx";
 import { useRepositoryLookup } from "../hooks/useRepositoryLookup.js";
-import { MOCK_COMMITS } from "../data/mock.js";
-import { MIN_COMMITS, preselectCommits } from "../utils/commits.js";
+import { MIN_COMMITS, MAX_COMMITS } from "../utils/commits.js";
 import styles from "./NewProject.module.css";
 import watermark from "../assets/octocat-watermark.svg";
+
+async function postJSON(path, body, signal) {
+  const response = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal,
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const message = data.error || data.detail || data.reason;
+    const fields = Object.entries(data)
+      .map(([field, errors]) =>
+        field + ": " + (Array.isArray(errors) ? errors.join(" ") : JSON.stringify(errors))
+      )
+      .join(" ");
+
+    throw new Error(
+      (Array.isArray(message) ? message.join(" ") : message) ||
+      fields ||
+      "The request failed. Please try again."
+    );
+  }
+
+  return data;
+}
 
 const NewProject = () => {
   const navigate = useNavigate();
   const urlId = useId();
   const titleId = useId();
   const errorId = useId();
+  const pageId = useId();
 
-  const { status, repository, error, lookup, reset } = useRepositoryLookup();
+  const requestRef = useRef(null);
+
+  const { repository, error: lookupError, lookup, reset } = useRepositoryLookup();
   const [step, setStep] = useState("url"); // "url" | "setup" | "creating"
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
+  const [pages, setPages] = useState([]);
+  const [pagePath, setPagePath] = useState("");
+  const [commits, setCommits] = useState([]);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [isChecking, setIsChecking] = useState(false);
+  const [error, setError] = useState("");
 
-  // TODO: load the repository's real commits + preview screenshot from the backend; mock data for now.
-  const commits = MOCK_COMMITS;
-  const previewImage = commits[commits.length - 1].image;
-  const defaultSelection = useMemo(() => preselectCommits(commits), [commits]);
-  const [selectedIds, setSelectedIds] = useState(defaultSelection);
+  useEffect(() => () => requestRef.current?.abort(), []);
 
-  // TODO: POST the project (url, title, selectedIds) to the backend, then navigate to the new project's id.
-  useEffect(() => {
-    if (step !== "creating") return;
-    const timer = setTimeout(() => navigate("/projects/personal-website/timeline"), 2000);
-    return () => clearTimeout(timer);
-  }, [step, navigate]);
+  const displayedError = error || lookupError;
 
-  async function handleUrlSubmit(e) {
-    e.preventDefault();
-    const repo = await lookup(url);
-    if (repo) {
+  const canSubmit =
+    title.trim().length > 0 &&
+    pages.includes(pagePath) &&
+    selectedIds.length >= MIN_COMMITS &&
+    selectedIds.length <= MAX_COMMITS;
+
+  async function handleUrlSubmit(event) {
+    event.preventDefault();
+    if (requestRef.current) return;
+
+    const controller = new AbortController();
+    requestRef.current = controller;
+    setIsChecking(true);
+    setError("");
+
+    try {
+      const repo = await lookup(url);
+      if (!repo || controller.signal.aborted) return;
+
+      const report = await postJSON(
+        "/api/repo/compatibility/",
+        { url: repo.url },
+        controller.signal
+      );
+
+      if (!report.setup_available) {
+        const checks = [
+          [report.history?.history_status, report.history?.reason],
+          [report.html?.html_status, report.html?.reason],
+          [report.dependencies?.status, report.dependencies?.reason],
+        ];
+        const problem = checks.find(([status]) => status !== "passed");
+
+        throw new Error(
+          problem?.[1] || report.reason || "This repository is not supported."
+        );
+      }
+
+      const history = await postJSON(
+        "/api/repo/commits/",
+        { url: repo.url },
+        controller.signal
+      );
+
+      if (controller.signal.aborted) return;
+
+      const availablePages = report.html.html_pages;
+
+      if (!availablePages.length || !history.commits.length) {
+        throw new Error("No pages or commits are available for capture.");
+      }
+
       setTitle(repo.name);
+      setPages(availablePages);
+      setPagePath(
+        availablePages.find((path) => path.toLowerCase() === "index.html") ||
+        availablePages[0]
+      );
+
+      setCommits(
+        history.commits.map((commit) => ({
+          ...commit,
+          id: commit.sha,
+        }))
+      );
+
+      setSelectedIds(history.preselected);
       setStep("setup");
+    } catch (err) {
+      if (!controller.signal.aborted) {
+        setError(err.message || "Could not prepare the project.");
+      }
+    } finally {
+      if (requestRef.current === controller) requestRef.current = null;
+      if (!controller.signal.aborted) setIsChecking(false);
     }
   }
 
-  function handleSetupSubmit(e) {
-    e.preventDefault();
-    if (selectedIds.length >= MIN_COMMITS && title.trim()) setStep("creating");
+  async function handleSetupSubmit(event) {
+    event.preventDefault();
+    if (!canSubmit || requestRef.current) return;
+
+    const controller = new AbortController();
+    requestRef.current = controller;
+    setError("");
+    setStep("creating");
+
+    try {
+      const result = await postJSON(
+        "/api/analyses/",
+        {
+          url: repository.url,
+          name: title.trim(),
+          page_path: pagePath,
+          commit_shas: selectedIds,
+        },
+        controller.signal
+      );
+
+      if (!controller.signal.aborted) {
+        navigate("/projects/" + result.project_id + "/timeline");
+      }
+    } catch (err) {
+      if (!controller.signal.aborted) {
+        setError(err.message || "Could not create the project.");
+        setStep("setup");
+      }
+    } finally {
+      if (requestRef.current === controller) requestRef.current = null;
+    }
+  }
+
+  function changeUrl() {
+    reset();
+    setError("");
+    setPages([]);
+    setPagePath("");
+    setCommits([]);
+    setSelectedIds([]);
+    setStep("url");
+  }
+
+  if (step === "creating") {
+    return (
+      <PageLayout width="full">
+        <div className={styles.page}>
+          <img
+            className={styles.watermark}
+            src={watermark}
+            alt=""
+            aria-hidden="true"
+          />
+
+          <div className={styles.creating} role="status">
+            <h1 className={styles.creatingTitle}>Creating project</h1>
+            <Spinner size={56} label="Creating project" />
+          </div>
+        </div>
+      </PageLayout>
+    );
   }
 
   // The read-only URL on the setup step is "click to change": it returns to step 1 with the URL kept.
@@ -79,18 +234,15 @@ const NewProject = () => {
             <label className={styles.label} htmlFor={urlId}>GitHub Repository URL</label>
             <input
               id={urlId}
-              className={`${styles.input} ${styles.inputReadonly}`}
-              value={repository?.url ?? url}
+              className={styles.input}
+              value={repository.url}
               readOnly
-              title="Click to change the repository"
-              onClick={changeUrl}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  changeUrl();
-                }
-              }}
             />
+
+            <CancelButton onClick={changeUrl}>
+              Change repository
+            </CancelButton>
+
           </div>
 
           <div className={`${styles.field} ${styles.titleField}`}>
@@ -99,27 +251,57 @@ const NewProject = () => {
               id={titleId}
               className={styles.input}
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(event) => setTitle(event.target.value)}
+              maxLength={200}
               required
             />
           </div>
 
-          <div className={styles.preview}>
-            <img src={previewImage} alt={`Preview of ${title || "the project"}`} />
+          <div className={styles.field + " " + styles.titleField}>
+            <label className={styles.label} htmlFor={pageId}>
+              HTML Page
+            </label>
+
+            <select
+              id={pageId}
+              className={styles.input}
+              value={pagePath}
+              onChange={(event) => setPagePath(event.target.value)}
+              required
+            >
+              {pages.map((path) => (
+                <option key={path} value={path}>
+                  {path}
+                </option>
+              ))}
+            </select>
           </div>
 
-          <CommitPicker commits={commits} selectedIds={selectedIds} onChange={setSelectedIds} />
+          <p>Screenshots will appear after you create the project.</p>
+
+          <CommitPicker
+            commits={commits}
+            selectedIds={selectedIds}
+            onChange={setSelectedIds}
+          />
+
+          {displayedError && (
+            <p role="alert" className={styles.error}>
+              {displayedError}
+            </p>
+          )}
 
           <div className={styles.actions}>
-            <NextButton disabled={selectedIds.length < MIN_COMMITS || !title.trim()} />
+            <NextButton disabled={!canSubmit}>
+              Create project
+            </NextButton>
+
             <CancelButton to="/" />
           </div>
         </form>
       </PageLayout>
     );
   }
-
-  const isInvalid = status === "invalid";
 
   return (
     <PageLayout width="narrow" watermark>
@@ -129,26 +311,31 @@ const NewProject = () => {
           <label className={styles.label} htmlFor={urlId}>GitHub Repository URL</label>
           <input
             id={urlId}
-            className={`${styles.input} ${isInvalid ? styles.inputInvalid : ""}`}
+            className={
+              styles.input + (displayedError ? " " + styles.inputInvalid : "")
+            }
             type="url"
-            inputMode="url"
             value={url}
-            onChange={(e) => setUrl(e.target.value)}
+            onChange={(event) => setUrl(event.target.value)}
             placeholder="https://github.com/your-username/your-repository"
             spellCheck={false}
-            readOnly={status === "loading"}
-            aria-invalid={isInvalid}
-            aria-describedby={isInvalid ? errorId : undefined}
+            readOnly={isChecking}
+            aria-invalid={Boolean(displayedError)}
+            aria-describedby={displayedError ? errorId : undefined}
           />
-          {isInvalid && (
+
+          {displayedError && (
             <p id={errorId} role="alert" className={styles.error}>
-              Error: {error}
+              {displayedError}
             </p>
           )}
         </div>
 
         <div className={styles.actions}>
-          <NextButton loading={status === "loading"} loadingLabel="Checking repository" />
+          <NextButton
+            loading={isChecking}
+            loadingLabel="Checking repository"
+          />
           <CancelButton to="/" />
         </div>
       </form>
