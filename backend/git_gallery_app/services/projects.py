@@ -1,4 +1,5 @@
 from ..models import Capture, Job
+from django.urls import reverse
 
 
 def get_project_details(project):
@@ -30,7 +31,19 @@ def get_project_details(project):
 
     for capture in sorted(job.captures, key=lambda item: item.position):
         commit = commits_by_sha[capture.commit_sha]
+        screenshot_url = None
 
+        if (
+            capture.status == Capture.Status.COMPLETE
+            and capture.screenshot_path
+        ):
+            screenshot_url = reverse(
+                "get-capture-image",
+                kwargs={
+                    "job_id": str(job.pk),
+                    "position": capture.position,
+                },
+            )
         commits.append({
             "sha": commit.sha,
             "message": commit.message,
@@ -39,6 +52,7 @@ def get_project_details(project):
             "position": capture.position,
             "status": capture.status,
             "error_message": capture.error_message,
+            "screenshot_url": screenshot_url,
         })
 
     succeeded = sum(
