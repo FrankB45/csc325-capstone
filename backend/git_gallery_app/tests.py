@@ -4,7 +4,6 @@ from unittest.mock import patch
 
 import requests
 from django.test import SimpleTestCase
-from rest_framework.test import APIRequestFactory
 
 # Create your tests here.
 

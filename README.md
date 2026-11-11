@@ -262,5 +262,5 @@ npm run dev
 The project gallery is shared by everyone using the same MongoDB-backed installation and does not require sign-in:
 
 - `GET /api/projects/` lists shared projects and their current status.
-- `GET /api/projects/<project-id>/analyses/` lists the project's saved analysis results.
-- `POST /api/projects/<project-id>/analyses/` saves an analysis result with `analysis_status`, `processed_versions`, `total_versions`, and a JSON object in `results`.
+- `GET /api/projects/<project-id>/` returns a project's details and latest analysis.
+- `POST /api/analyses/` starts a new analysis.
