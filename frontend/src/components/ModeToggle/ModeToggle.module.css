@@ -1,0 +1,13 @@
+.toggle { display: inline-flex; padding: 4px; border-radius: 999px; background: var(--color-lightgray); }
+.option {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: var(--color-navy);
+  cursor: pointer;
+  transition: background-color 200ms, color 200ms;
+}
+.active { background: var(--color-navy); color: var(--color-white); }

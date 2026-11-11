@@ -1,0 +1,12 @@
+.slot {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 173 / 100;
+  border: 5px solid transparent;
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(var(--color-lightgray), var(--color-lightgray)) padding-box,
+    var(--gradient-border) border-box;
+}
+.hint { margin: 0; padding: 0 16px; text-align: center; font-size: 20px; font-weight: 600; color: var(--color-purple); }

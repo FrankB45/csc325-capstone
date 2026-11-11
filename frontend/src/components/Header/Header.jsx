@@ -1,25 +1,28 @@
 import { useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import styles from "./Header.module.css";
 import logoIcon from "../../assets/GitGallery Logo.svg";
 import infoIcon from "../../assets/Info Icon.svg";
 
 const Header = () => {
+  const navigate = useNavigate();
+  const onLogoClick = useCallback(() => {
+    navigate("/");
+  }, [navigate]);
   const onInfoIconClick = useCallback(() => {
-    // TO-DO
-  }, []);
+    navigate("/info");
+  }, [navigate]);
 
   return (
     // Header container
-    <div className={styles.header}>
-      {/* GitGallery logo container */}
-      <div className={styles.gitgalleryLogo} onClick={onInfoIconClick}>
-        {/* GitGallery logo vector*/}
-        <img
-          className={styles.vectorIcon}
-          alt="GitGallery Logo Icon"
-          src={logoIcon}
-        />
-      </div>
+    <header className={styles.header}>
+      {/* GitGallery logo vector*/}
+      <img
+        className={styles.gitgalleryLogo}
+        alt="GitGallery Logo Icon"
+        src={logoIcon}
+        onClick={onLogoClick}
+      />
 
       {/* Info icon */}
       <img
@@ -28,7 +31,7 @@ const Header = () => {
         src={infoIcon}
         onClick={onInfoIconClick}
       />
-    </div>
+    </header>
   );
 };
 

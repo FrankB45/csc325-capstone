@@ -1,0 +1,15 @@
+.cancel {
+  display: inline-block;
+  padding: 4px 8px;
+  border: none;
+  background: none;
+  font-family: var(--font-inter);
+  font-size: 24px;
+  font-weight: 200;
+  letter-spacing: 0.02em;
+  color: var(--color-navy-50);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 200ms ease-out;
+}
+.cancel:hover { color: var(--color-coral); }

@@ -1,0 +1,36 @@
+.item {
+  border: 1px solid var(--color-lightgray);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 56px;
+  padding: 0 20px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--color-navy);
+  cursor: pointer;
+  list-style: none;
+}
+.summary::-webkit-details-marker { display: none; }
+.summary:hover { background: var(--color-white); }
+
+.icon {
+  flex-shrink: 0;
+  font-size: 26px;
+  font-weight: 300;
+  line-height: 1;
+  color: var(--color-purple);
+  transition: transform 200ms ease-out, color 200ms ease-out;
+}
+/* "+" turns into an orange "×" when open */
+.item[open] .icon { transform: rotate(45deg); color: var(--color-coral); }
+
+.answer { padding: 16px 20px 20px; border-top: 1px solid var(--color-lightgray); }
+.answer p { max-width: 700px; margin: 0; font-size: 14px; line-height: 1.65; color: var(--color-purple); }

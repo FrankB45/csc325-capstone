@@ -1,8 +1,21 @@
 from urllib.parse import quote, urlparse
+import os
 
 import requests
 
 MAX_HISTORY_COMMITS = 50
+
+def github_headers() -> dict[str, str]:
+    headers = {
+        "Accept": "application/vnd.github+json",
+    }
+
+    token = os.getenv("GITHUB_TOKEN", "").strip()
+
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    return headers
 
 def parse_github_url(url: str) -> tuple[str, str]:
 
@@ -36,7 +49,7 @@ def get_repository_information(repo_url: str) -> dict:
 
     response = requests.get(
         api_url,
-        headers={"Accept": "application/vnd.github+json"},
+        headers=github_headers(),
         timeout=10,
     )
 
@@ -51,6 +64,53 @@ def get_repository_information(repo_url: str) -> dict:
         "url": data["html_url"],
     }
 
+
+def get_commit_history(
+    repo_url: str,
+    *,
+    ref: str | None = None,
+) -> list[dict]:
+    """Commits on the default branch, ordered oldest -> newest.
+
+    Each item: {"sha": <full 40-char sha>, "message": <first line>, "date": <ISO str>}.
+    Raises ValueError if the repository has no commits or more than 50
+    (the supported range), and requests exceptions on GitHub failures.
+    """
+    owner, repo = parse_github_url(repo_url)
+
+    params = {"per_page": MAX_HISTORY_COMMITS + 1}
+    if ref is not None:
+        params["sha"] = ref
+
+    response = requests.get(
+        f"https://api.github.com/repos/{owner}/{repo}/commits",
+        headers=github_headers(),
+        params=params,
+        timeout=10,
+    )
+
+    if response.status_code == 409:  # GitHub: "Git Repository is empty."
+        raise ValueError("Repository has no commits.")
+    response.raise_for_status()
+    items = response.json()
+
+    if not items:
+        raise ValueError("Repository has no commits.")
+    if len(items) > MAX_HISTORY_COMMITS:
+        raise ValueError(
+            f"Repository has more than {MAX_HISTORY_COMMITS} commits, which is not supported."
+        )
+
+    # GitHub returns newest first; the app works oldest -> newest.
+    return [
+        {
+            "sha": item["sha"],
+            "message": item["commit"]["message"].splitlines()[0] if item["commit"]["message"] else "",
+            "date": item["commit"]["author"]["date"],
+            "author_name": item["commit"]["author"]["name"] or "Unknown author",
+        }
+        for item in reversed(items)
+    ]
 
 def check_repository_history(repo_url: str) -> dict:
     """Check history only; HTML-page and dependency checks are still required."""
@@ -125,7 +185,7 @@ def _count_default_branch_commits(owner: str, repo: str, default_branch: str) ->
     while True:
         response = requests.get(
             api_url,
-            headers={"Accept": "application/vnd.github+json"},
+            headers=github_headers(),
             params={
                 "sha": history_reference,
                 "per_page": MAX_HISTORY_COMMITS,
@@ -191,7 +251,7 @@ def _history_http_failure(error: requests.HTTPError, checking_commits: bool) -> 
 
 
 def check_repository_html_pages(repo_url: str) -> dict:
-    """Discover candidate filenames only, without deciding full compatibility."""
+    """Check the required homepage and discover candidate filenames only."""
     try:
         owner, repo = parse_github_url(repo_url)
     except ValueError as error:
@@ -240,18 +300,29 @@ def check_repository_html_pages(repo_url: str) -> dict:
     except ValueError as error:
         return {"html_status": "unavailable", "html_pages": [], "reason": str(error)}
 
-    if not html_pages:
+    # Only a complete, validated listing can establish a missing homepage.
+    has_root_index = False
+    for path in html_pages:
+        if path.lower() == "index.html":
+            has_root_index = True
+            break
+
+    if not has_root_index:
         return {
             "html_status": "rejected",
-            "html_pages": [],
-            "reason": "The default branch contains no candidate lowercase .html files.",
+            "html_pages": html_pages,
+            "reason": (
+                "The default branch must contain a regular root index.html file "
+                "(filename matching ignores case)."
+            ),
         }
 
     return {
         "html_status": "passed",
         "html_pages": html_pages,
         "reason": (
-            "Candidate HTML filenames were found. Page rendering and full repository "
+            "A root index.html file and candidate HTML filenames were found. "
+            "Page rendering and full repository "
             "compatibility have not been checked; dependency checks are still required."
         ),
     }
@@ -263,7 +334,7 @@ def _get_default_branch_tree_sha(owner: str, repo: str, default_branch: str) -> 
     branch_reference = quote(f"heads/{default_branch}", safe="")
     response = requests.get(
         f"https://api.github.com/repos/{owner}/{repo}/commits/{branch_reference}",
-        headers={"Accept": "application/vnd.github+json"},
+        headers=github_headers(),
         timeout=10,
     )
     response.raise_for_status()
@@ -284,7 +355,7 @@ def _list_html_page_paths(owner: str, repo: str, tree_sha: str) -> list[str]:
     """Return sorted candidate paths only when the entire tree listing is usable."""
     response = requests.get(
         f"https://api.github.com/repos/{owner}/{repo}/git/trees/{tree_sha}",
-        headers={"Accept": "application/vnd.github+json"},
+        headers=github_headers(),
         params={"recursive": "1"},
         timeout=10,
     )
@@ -327,31 +398,58 @@ def _list_html_page_paths(owner: str, repo: str, tree_sha: str) -> list[str]:
         ):
             raise ValueError("GitHub returned a malformed file entry.")
 
-        if mode in ("100644", "100755") and path.endswith(".html"):
-            html_pages.append(path)
+        if mode in ("100644", "100755"):
+            lowercase_path = path.lower()
+            if lowercase_path.endswith(".html") or lowercase_path.endswith(".htm"):
+                html_pages.append(path)
 
     return sorted(html_pages)
 
 
 def get_repository_compatibility_report(repo_url: str) -> dict:
-    """Combine prerequisite results without declaring full compatibility."""
+    """Combine checks to decide availability of setup under the limited MVP profile."""
+    # Import here because the dependency service reuses this module's GitHub helpers.
+    from .dependencies import check_repository_dependencies
+
     history_result = check_repository_history(repo_url)
     html_result = check_repository_html_pages(repo_url)
+    dependency_result = check_repository_dependencies(repo_url)
     history_status = history_result.get("history_status")
     html_status = html_result.get("html_status")
+    dependencies = dependency_result.copy()
+    dependency_status = dependencies.pop("dependency_status", None)
+    dependencies["status"] = dependency_status
+    setup_available = False
 
-    # A known rejection takes precedence even if the other check is unavailable.
-    if history_status == "rejected" or html_status == "rejected":
+    # A known rejection takes precedence even if another check is unavailable.
+    if (
+        history_status == "rejected"
+        or html_status == "rejected"
+        or dependency_status == "rejected"
+    ):
         overall_status = "rejected"
         reason = "An implemented check found a failed repository prerequisite."
-    elif history_status != "passed" or html_status != "passed":
+    elif (
+        history_status not in ("passed", "pending")
+        or html_status not in ("passed", "pending")
+        or dependency_status not in ("pending", "passed")
+    ):
         overall_status = "unavailable"
         reason = "At least one implemented check could not complete reliably."
-    else:
+    elif (
+        history_status == "pending"
+        or html_status == "pending"
+        or dependency_status == "pending"
+    ):
         overall_status = "pending"
+        reason = "At least one compatibility check remains unfinished."
+    else:
+        overall_status = "accepted"
+        setup_available = True
         reason = (
-            "History and candidate HTML checks passed; "
-            "unsupported-dependency checking is unfinished."
+            "The repository meets the limited supported-site profile for entering project setup. "
+            "This does not guarantee screenshot success or complete dependency detection. "
+            "Multiple-independent-website detection is deferred from this MVP setup gate."
         )
 
     return {
@@ -359,11 +457,42 @@ def get_repository_compatibility_report(repo_url: str) -> dict:
         "reason": reason,
         "history": history_result,
         "html": html_result,
-        "dependencies": {
-            "status": "pending",
-            "reason": "Unsupported-dependency checking is not implemented.",
-        },
-        "setup_available": False,
+        "dependencies": dependencies,
+        "setup_available": setup_available,
         # Each check resolves the default branch independently.
         "same_snapshot_guaranteed": False,
     }
+
+def get_branch_revision(repo_url: str, branch: str) -> dict:
+    if not isinstance(branch, str) or not branch.strip():
+        raise ValueError("The repository has no usable default branch.")
+
+    owner, repo = parse_github_url(repo_url)
+    reference = quote(f"heads/{branch}", safe="")
+
+    response = requests.get(
+        f"https://api.github.com/repos/{owner}/{repo}/commits/{reference}",
+        headers=github_headers(),
+        timeout=10,
+    )
+
+    if response.status_code == 409:
+        raise ValueError("Repository has no commits.")
+
+    response.raise_for_status()
+    data = response.json()
+
+    revision = {
+        "head_sha": data["sha"],
+        "tree_sha": data["commit"]["tree"]["sha"],
+    }
+
+    for sha in revision.values():
+        if (
+            not isinstance(sha, str)
+            or len(sha) != 40
+            or any(character not in "0123456789abcdef" for character in sha)
+        ):
+            raise ValueError("GitHub returned an invalid revision identifier.")
+
+    return revision

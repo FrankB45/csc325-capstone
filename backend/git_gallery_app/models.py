@@ -132,6 +132,11 @@ class Job(models.Model):
     started_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
 
+    # Updated by the worker as it makes progress. If it stops changing, the worker died.
+    heartbeat_at = models.DateTimeField(null=True, blank=True)
+    # How many times a worker has claimed this job. Stops a job that keeps crashing the worker.
+    attempts = models.PositiveSmallIntegerField(default=0)
+
     error_message = models.TextField(default="", blank=True)
 
     class Meta:

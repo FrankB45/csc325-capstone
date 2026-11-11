@@ -1,106 +1,51 @@
-import { useEffect, useState } from "react";
+import PageLayout from "../components/PageLayout/PageLayout.jsx";
+import NewProjectButton from "../components/New Project Button/NewProjectButton.jsx";
+import ViewGalleryButton from "../components/View Gallery Button/ViewGalleryButton.jsx";
+import wordmark from "../assets/GitGallery-wordmark.svg";
+import watermark from "../assets/octocat-watermark.svg";
+import styles from "./Home.module.css";
 
-import Header from "../components/Header/Header.jsx";
-import RepositoryValidation from "../components/RepositoryValidation.jsx";
+const FEATURES = [
+  {
+    title: "Visual Timeline",
+    text: "Browse every commit as a visual screenshot, not a wall of diffs. Understand the evolution of your project at a glance.",
+  },
+  {
+    title: "AI-Powered Insights",
+    text: "AI groups commits into milestones, highlights what changed visually, and explains each change in plain language.",
+  },
+];
 
-function Home() {
-  const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [showSubmission, setShowSubmission] = useState(false);
-  const [refreshCount, setRefreshCount] = useState(0);
+const Home = () => (
+  <PageLayout width="full">
+    <div className={styles.page}>
+      {/* decorative background mark, clipped by the right edge of the page */}
+      <img className={styles.watermark} src={watermark} alt="" aria-hidden="true" />
 
-  useEffect(() => {
-    const controller = new AbortController();
+      <div className={styles.content}>
+        <section className={styles.hero}>
+          <h1 className={styles.title}>
+            <img className={styles.wordmark} src={wordmark} alt="GitGallery" />
+          </h1>
+          <p className={styles.tagline}>Visual commit history for designers &amp; stakeholders</p>
 
-    async function loadProjects() {
-      setLoading(true);
-      setError("");
+          <div className={styles.actions}>
+            <NewProjectButton />
+            <ViewGalleryButton />
+          </div>
+        </section>
 
-      try {
-        const response = await fetch("/api/projects/", {
-          signal: controller.signal,
-        });
-
-        if (!response.ok) {
-          throw new Error("Could not load the project gallery.");
-        }
-
-        const data = await response.json();
-        setProjects(data.projects);
-      } catch (loadError) {
-        if (loadError.name !== "AbortError") {
-          setError(loadError.message);
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    loadProjects();
-
-    return () => controller.abort();
-  }, [refreshCount]);
-
-  function handleProjectCreated() {
-    setShowSubmission(false);
-    setRefreshCount((count) => count + 1);
-  }
-
-  return (
-    <>
-      <Header />
-
-      <main className="gallery-page">
-        {showSubmission ? (
-          <>
-            <button type="button" onClick={() => setShowSubmission(false)}>
-              Back to gallery
-            </button>
-
-            <RepositoryValidation
-              onProjectCreated={handleProjectCreated}
-            />
-          </>
-        ) : (
-          <>
-            <h1>Shared Project Gallery</h1>
-
-            <button type="button" onClick={() => setShowSubmission(true)}>
-              New Project
-            </button>
-
-            {loading && <p>Loading projects…</p>}
-            {error && <p role="alert">{error}</p>}
-
-            {!loading && !error && projects.length === 0 && (
-              <p>No projects are available yet. Add a project to get started.</p>
-            )}
-
-            {!loading && !error && projects.length > 0 && (
-              <ul>
-                {projects.map((project) => (
-                  <li key={project.id}>
-                    <h2>{project.project_name}</h2>
-                    <p>
-                      {project.repository_owner}/{project.repository_name}
-                    </p>
-                    <p>
-                      {project.latest_job
-                        ? `Status: ${project.latest_job.status}`
-                        : "No analysis yet"}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </>
-        )}
-      </main>
-    </>
-  );
-}
+        <section className={styles.features} aria-label="Features">
+          {FEATURES.map((f) => (
+            <article key={f.title} className={styles.feature}>
+              <h2 className={styles.featureTitle}>{f.title}</h2>
+              <p className={styles.featureText}>{f.text}</p>
+            </article>
+          ))}
+        </section>
+      </div>
+    </div>
+  </PageLayout>
+);
 
 export default Home;

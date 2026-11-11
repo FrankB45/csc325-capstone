@@ -1,0 +1,39 @@
+@import "../../styles/global.css";
+
+.newProjectButton {
+  width: 272px;
+  height: 64px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0 24px;
+
+  border: none;
+  border-radius: 10px;
+
+  background-color: var(--color-coral);
+
+  cursor: pointer;
+
+  transition: background-color 300ms ease-out;
+}
+
+.newProjectText {
+  font-family: var(--font-inter);
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--color-white);
+
+  white-space: nowrap;
+}
+
+/* Hover variant */
+.newProjectButton:hover {
+  background-color: var(--color-light-coral);
+}
+
+.newProjectButton:hover .newProjectText {
+  color: var(--color-purple);
+}

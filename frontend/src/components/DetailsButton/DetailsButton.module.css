@@ -1,0 +1,25 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: var(--font-inter);
+  font-size: 20px;
+  color: var(--color-navy);
+  cursor: pointer;
+}
+.button:hover { color: var(--color-coral); }
+
+/* grey triangle */
+.arrow {
+  width: 0;
+  height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-left: 14px solid var(--color-lightgray);
+  transition: transform 200ms ease-out, border-left-color 200ms ease-out;
+}
+.button:hover .arrow { border-left-color: var(--color-coral); }
+.open { transform: rotate(90deg); }
