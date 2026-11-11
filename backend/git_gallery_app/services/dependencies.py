@@ -12,6 +12,7 @@ from .github import (
     _get_default_branch_tree_sha,
     get_repository_information,
     parse_github_url,
+    github_headers,
 )
 
 # These file-blob limits leave existing metadata/tree retrieval behavior unchanged.
@@ -487,7 +488,7 @@ def _get_snapshot_files(owner: str, repo: str, tree_sha: str) -> dict:
     """Keep regular-file blob identities only after validating the complete listing."""
     response = requests.get(
         f"https://api.github.com/repos/{owner}/{repo}/git/trees/{tree_sha}",
-        headers={"Accept": "application/vnd.github+json"},
+        headers=github_headers(),
         params={"recursive": "1"},
         timeout=10,
     )
@@ -544,7 +545,7 @@ def _read_snapshot_text(owner: str, repo: str, blob_sha: str, budget=None) -> st
 def _read_snapshot_bytes(owner: str, repo: str, blob_sha: str, budget=None) -> bytes | None:
     """Validate a fixed blob; an optional inspection budget stops oversized reads."""
     url = f"https://api.github.com/repos/{owner}/{repo}/git/blobs/{blob_sha}"
-    headers = {"Accept": "application/vnd.github+json"}
+    headers = github_headers()
     if budget is None:
         # Existing callers retain the original request and validation behavior.
         response = requests.get(url, headers=headers, timeout=10)
