@@ -1,8 +1,21 @@
 from urllib.parse import quote, urlparse
+import os
 
 import requests
 
 MAX_HISTORY_COMMITS = 50
+
+def github_headers() -> dict[str, str]:
+    headers = {
+        "Accept": "application/vnd.github+json",
+    }
+
+    token = os.getenv("GITHUB_TOKEN", "").strip()
+
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    return headers
 
 def parse_github_url(url: str) -> tuple[str, str]:
 
@@ -36,7 +49,7 @@ def get_repository_information(repo_url: str) -> dict:
 
     response = requests.get(
         api_url,
-        headers={"Accept": "application/vnd.github+json"},
+        headers=github_headers(),
         timeout=10,
     )
 
@@ -71,7 +84,7 @@ def get_commit_history(
 
     response = requests.get(
         f"https://api.github.com/repos/{owner}/{repo}/commits",
-        headers={"Accept": "application/vnd.github+json"},
+        headers=github_headers(),
         params=params,
         timeout=10,
     )
@@ -172,7 +185,7 @@ def _count_default_branch_commits(owner: str, repo: str, default_branch: str) ->
     while True:
         response = requests.get(
             api_url,
-            headers={"Accept": "application/vnd.github+json"},
+            headers=github_headers(),
             params={
                 "sha": history_reference,
                 "per_page": MAX_HISTORY_COMMITS,
@@ -321,7 +334,7 @@ def _get_default_branch_tree_sha(owner: str, repo: str, default_branch: str) -> 
     branch_reference = quote(f"heads/{default_branch}", safe="")
     response = requests.get(
         f"https://api.github.com/repos/{owner}/{repo}/commits/{branch_reference}",
-        headers={"Accept": "application/vnd.github+json"},
+        headers=github_headers(),
         timeout=10,
     )
     response.raise_for_status()
@@ -342,7 +355,7 @@ def _list_html_page_paths(owner: str, repo: str, tree_sha: str) -> list[str]:
     """Return sorted candidate paths only when the entire tree listing is usable."""
     response = requests.get(
         f"https://api.github.com/repos/{owner}/{repo}/git/trees/{tree_sha}",
-        headers={"Accept": "application/vnd.github+json"},
+        headers=github_headers(),
         params={"recursive": "1"},
         timeout=10,
     )
@@ -459,7 +472,7 @@ def get_branch_revision(repo_url: str, branch: str) -> dict:
 
     response = requests.get(
         f"https://api.github.com/repos/{owner}/{repo}/commits/{reference}",
-        headers={"Accept": "application/vnd.github+json"},
+        headers=github_headers(),
         timeout=10,
     )
 
