@@ -174,16 +174,6 @@ const NewProject = () => {
     }
   }
 
-  function changeUrl() {
-    reset();
-    setError("");
-    setPages([]);
-    setPagePath("");
-    setCommits([]);
-    setSelectedIds([]);
-    setStep("url");
-  }
-
   if (step === "creating") {
     return (
       <PageLayout width="full">
