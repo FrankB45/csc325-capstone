@@ -1,7 +1,7 @@
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from .models import Job, Project, RepositorySnapshot
+from ..models import Job, Project, RepositorySnapshot
 
 
 class SharedGalleryTests(TestCase):

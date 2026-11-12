@@ -2,7 +2,7 @@ from copy import deepcopy
 from unittest import TestCase
 from unittest.mock import patch
 
-from .services.github import get_repository_compatibility_report
+from ..services.github import get_repository_compatibility_report
 
 
 class RepositoryCompatibilityReportTests(TestCase):
