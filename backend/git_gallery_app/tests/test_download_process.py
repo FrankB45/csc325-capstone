@@ -7,8 +7,8 @@ from unittest.mock import patch
 
 import requests
 
-from .capture.download import download_commit   # ".." versions if your tests are in tests/
-from .capture.errors import CaptureError
+from ..capture.download import download_commit   # ".." versions if your tests are in tests/
+from ..capture.errors import CaptureError
 
 SHA = "a" * 40
 

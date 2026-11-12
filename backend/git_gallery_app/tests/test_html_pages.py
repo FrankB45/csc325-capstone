@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import requests
 
-from .services.github import check_repository_html_pages
+from ..services.github import check_repository_html_pages
 
 
 class RepositoryHtmlPagesTests(TestCase):
