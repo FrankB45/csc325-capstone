@@ -7,9 +7,9 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APITransactionTestCase
 
-from .models import Capture, Commit, Job, Project, RepositorySnapshot
-from .services import analyses
-from .services.jobs import create_job
+from ..models import Capture, Commit, Job, Project, RepositorySnapshot
+from ..services import analyses
+from ..services.jobs import create_job
 
 
 class CompatibilityRecheckPreservationTests(APITransactionTestCase):

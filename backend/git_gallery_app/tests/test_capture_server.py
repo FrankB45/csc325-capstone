@@ -4,7 +4,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from .capture.server import serve_directory   # use "..capture.server" if your tests are in tests/
+from ..capture.server import serve_directory   # use "..capture.server" if your tests are in tests/
 
 # An opener with no proxy. If your computer or network has a proxy configured,
 # urllib would otherwise try to send our localhost requests through it.
