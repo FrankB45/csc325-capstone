@@ -35,10 +35,13 @@ const ProjectCard = ({ project }) => {
     <article className={styles.card}>
       <div className={styles.text}>
         <h2 className={styles.name}>{project.name}</h2>
+        {project.repository_owner && project.repository_name && (
+          <p className={styles.meta}>{project.repository_owner}/{project.repository_name}</p>
+        )}
         <p className={styles.meta}>Last modified: {formatDate(project.lastModified)}</p>
         <p className={styles.meta}># of Commits: {project.commitCount}</p>
         <p className={styles.meta}>
-          Status: {project.status.replaceAll("_", " ")}
+          Status: {project.status ? project.status.replaceAll("_", " ") : "No analysis yet"}
         </p>
         <p className={styles.meta}>
           {project.progress.processed} / {project.progress.total} processed

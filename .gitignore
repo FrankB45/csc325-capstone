@@ -12,3 +12,4 @@ backend/screenshots/
 __pycache__/
 *.pyc
 *.pyo
+backend/package-lock.json

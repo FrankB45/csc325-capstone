@@ -232,14 +232,12 @@ Install the backend dependencies:
 python -m pip install -r requirements.txt
 ```
 
-Check the Django configuration and apply any existing database migrations:
+Check the Django configuration and apply the project gallery database migration:
 
 ```sh
 python manage.py check
 python manage.py migrate
 ```
-
-The initial scaffold has no application models, so there are no migrations to apply.
 
 Start the backend:
 
@@ -259,6 +257,10 @@ npm install
 npm run dev
 ```
 
+### Shared project and analysis API
 
+The project gallery is shared by everyone using the same MongoDB-backed installation and does not require sign-in:
 
-
+- `GET /api/projects/` lists shared projects and their current status.
+- `GET /api/projects/<project-id>/` returns a project's details and latest analysis.
+- `POST /api/analyses/` starts a new analysis.

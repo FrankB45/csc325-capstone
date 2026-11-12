@@ -1,5 +1,6 @@
 from ..models import Capture, Job, Project, RepositorySnapshot
 from django.urls import reverse
+from .github import parse_github_url
 
 
 def get_project_details(project):
@@ -111,6 +112,10 @@ def get_project_summaries():
 
 def _project_summary(project, job):
     captures = job.captures if job else []
+    try:
+        repository_owner, repository_name = parse_github_url(project.repository_url)
+    except ValueError:
+        repository_owner, repository_name = None, None
 
     succeeded = sum(
         c.status == Capture.Status.COMPLETE
@@ -147,8 +152,11 @@ def _project_summary(project, job):
         "id": str(project.pk),
         "name": project.name,
         "repository_url": project.repository_url,
+        "repository_owner": repository_owner,
+        "repository_name": repository_name,
+        "job_id": str(job.pk) if job else None,
         "updated_at": max(activity_times),
-        "status": job.status if job else "not_started",
+        "status": job.status if job else None,
         "page_path": job.page_path if job else None,
         "progress": {
             "total": len(captures),
