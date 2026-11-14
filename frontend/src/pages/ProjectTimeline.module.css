@@ -14,6 +14,13 @@
 .sync { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .syncText { margin: 0; font-size: 18px; color: var(--color-navy); }
 
+.downloadDialog { min-width: min(480px, calc(100vw - 48px)); padding: 48px 32px 32px; color: var(--color-navy); }
+.downloadDialog h2 { margin: 0 0 20px; font-size: 24px; }
+.downloadOptions { display: flex; flex-direction: column; gap: 10px; }
+.downloadOptions button { padding: 12px 14px; border: 1px solid #b9bdc7; border-radius: 6px; background: white; color: var(--color-navy); font: inherit; text-align: left; cursor: pointer; }
+.downloadOptions button:hover:not(:disabled) { border-color: var(--color-amber); background: #fffaf0; }
+.downloadOptions button:disabled { opacity: 0.55; cursor: not-allowed; }
+
 /* preview area: centered between the header row and the timeline */
 .stage { flex: 1; display: flex; align-items: flex-start; justify-content: center; padding: 28px 0; }
 .single { width: min(808px, 100%); }
