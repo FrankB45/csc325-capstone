@@ -221,7 +221,8 @@ const captureProjectPage = async (fullScreenshotCommits = []) => {
           const frameWidth = imageWidth + SCREENSHOT_FRAME_PADDING * 2;
           panel.style.boxSizing = "border-box";
           panel.style.width = `${frameWidth}px`;
-          panel.style.flex = `0 0 ${frameWidth}px`;
+          panel.style.height = `${imageHeight + SCREENSHOT_FRAME_PADDING * 2}px`;
+          panel.style.flex = "none";   // was `0 0 ${frameWidth}px`
           panel.style.margin = "0";
           panel.style.padding = `${SCREENSHOT_FRAME_PADDING}px`;
           panel.style.borderRadius = "16px";
