@@ -1,6 +1,17 @@
 import styles from "./CommitPreview.module.css";
 
-const CommitPreview = ({ commit, onOpen }) => {
+const getDisplayErrorMessage = (errorMessage, selectedPage) => {
+  if (!errorMessage || !selectedPage) return errorMessage;
+
+  const pageMatch = errorMessage.match(/"([^"]+)"/);
+  if (!pageMatch || pageMatch[1] === selectedPage) return errorMessage;
+
+  return errorMessage.replace(pageMatch[1], selectedPage);
+};
+
+const CommitPreview = ({ commit, onOpen, selectedPage }) => {
+  const displayError = getDisplayErrorMessage(commit.error_message, selectedPage);
+
   if (!commit.image) {
     return (
       <div className={styles.frame}>
@@ -10,7 +21,7 @@ const CommitPreview = ({ commit, onOpen }) => {
             : "Screenshot is not ready yet"}
         </p>
 
-        {commit.error_message && <p>{commit.error_message}</p>}
+        {displayError && <p>{displayError}</p>}
       </div>
     );
   }

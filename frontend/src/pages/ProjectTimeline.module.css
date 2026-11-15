@@ -9,7 +9,10 @@
 
 .top { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 0 10px; }
 .titleRow { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+.titleMeta { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 12px; }
 .title { margin: 0; font-size: clamp(28px, 2.5vw, 36px); font-weight: 600; line-height: 1.2; color: var(--color-amber); }
+.pagePicker { display: inline-flex; align-items: center; gap: 8px; color: var(--color-navy); font-size: 14px; font-weight: 600; }
+.pagePicker select { min-width: 180px; padding: 8px 10px; border: 1px solid #cfe0f2; border-radius: 8px; background: white; color: var(--color-navy); font: inherit; }
 
 .sync { display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .syncText { margin: 0; font-size: 18px; color: var(--color-navy); }

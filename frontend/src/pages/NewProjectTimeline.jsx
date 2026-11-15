@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useProject } from "../hooks/useProject.js";
 import { Link, useParams } from "react-router-dom";
 import PageLayout from "../components/PageLayout/PageLayout.jsx";
@@ -328,6 +328,10 @@ const projectPageWithFullScreenshots = async (commits) => {
 
 const ProjectTimelineView = ({ project, commits }) => {
   const analysis = project.analysis;
+  const availablePages = analysis?.available_pages ?? [analysis?.page_path].filter(Boolean);
+  const [selectedPage, setSelectedPage] = useState(
+    analysis?.page_path || analysis?.default_page || availablePages[0] || "",
+  );
   const [mode, setMode] = useState("standard"); // "standard" | "compare"
   const [picks, setPicks] = useState(() => {
     const latestCaptured = commits.filter((commit) => commit.image).at(-1);
@@ -341,6 +345,12 @@ const ProjectTimelineView = ({ project, commits }) => {
   const [downloadError, setDownloadError] = useState("");
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
   const modeRowRef = useRef(null);
+
+  useEffect(() => {
+    if (availablePages.length > 0 && !availablePages.includes(selectedPage)) {
+      setSelectedPage(availablePages[0]);
+    }
+  }, [availablePages, selectedPage]);
 
   // Compare slots stay fixed: 1 is left and 2 is right.
   const shownIds = mode === "standard" ? picks.filter(Boolean).slice(-1) : picks.filter(Boolean);
@@ -444,6 +454,7 @@ const ProjectTimelineView = ({ project, commits }) => {
           {analysis.progress.processed} / {analysis.progress.total} processed
           {" · "}
           {analysis.progress.failed} failed
+          {selectedPage ? ` · HTML page: ${selectedPage}` : ""}
         </p>
 
         {analysis.error_message && (
@@ -456,7 +467,24 @@ const ProjectTimelineView = ({ project, commits }) => {
             </div>
 
             <div className={styles.titleRow}>
-              <h1 className={styles.title}>{project.name}</h1>
+              <div className={styles.titleMeta}>
+                <h1 className={styles.title}>{project.name}</h1>
+
+                {availablePages.length > 1 && (
+                  <label className={styles.pagePicker}>
+                    HTML page
+                    <select
+                      value={selectedPage}
+                      onChange={(event) => setSelectedPage(event.target.value)}
+                      aria-label="Switch HTML page"
+                    >
+                      {availablePages.map((page) => (
+                        <option key={page} value={page}>{page}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+              </div>
 
               <DownloadButton
                 label="Download PNG"
@@ -478,12 +506,12 @@ const ProjectTimelineView = ({ project, commits }) => {
         >
           {mode === "standard" ? (
             <div className={styles.single}>
-              {shown[0] && <CommitPreview commit={shown[0]} onOpen={setOverlayCommit} />}
+              {shown[0] && <CommitPreview commit={shown[0]} onOpen={setOverlayCommit} selectedPage={selectedPage} />}
             </div>
           ) : (
             <div className={styles.pair}>
               {shown.map((c) => (
-                <CommitPreview key={c.id} commit={c} onOpen={setOverlayCommit} />
+                <CommitPreview key={c.id} commit={c} onOpen={setOverlayCommit} selectedPage={selectedPage} />
               ))}
               {shown.length < 2 && (
                 <EmptyCommitSlot

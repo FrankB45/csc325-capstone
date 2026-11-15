@@ -67,10 +67,16 @@ def get_project_details(project):
         for capture in job.captures
     )
 
+    available_pages = list(snapshot.available_pages or [])
+    if not available_pages:
+        available_pages = [job.page_path]
+
     result["analysis"] = {
         "job_id": str(job.pk),
         "snapshot_id": str(snapshot.pk),
         "page_path": job.page_path,
+        "default_page": snapshot.default_page or job.page_path,
+        "available_pages": available_pages,
         "status": job.status,
         "error_message": job.error_message,
         "created_at": job.created_at,
