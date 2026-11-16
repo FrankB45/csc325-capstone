@@ -27,14 +27,41 @@ const ProjectThumbnail = ({ url }) => {
   );
 };
 
-const ProjectCard = ({ project }) => {
+export const ProjectCardSkeleton = () => (
+  <div className={styles.card} aria-hidden="true">
+    <div className={styles.text}>
+      <div className={`${styles.bar} ${styles.barName}`} />
+      <div className={`${styles.bar} ${styles.barMeta}`} />
+      <div className={`${styles.bar} ${styles.barMeta}`} />
+    </div>
+    <div className={styles.loadingSlot}>
+      <div className={styles.loadingBox}>
+        <LoadingDots />
+      </div>
+    </div>
+  </div>
+);
+
+const ProjectCard = ({ project, onDelete }) => {
   const [open, setOpen] = useState(false);
   const detailsId = useId();
 
   return (
     <article className={styles.card}>
       <div className={styles.text}>
-        <h2 className={styles.name}>{project.name}</h2>
+        <div className={styles.headingRow}>
+          <h2 className={styles.name}>{project.name}</h2>
+          {onDelete && (
+            <button
+              type="button"
+              className={styles.delete}
+              onClick={() => onDelete(project)}
+              aria-label={`Delete ${project.name}`}
+            >
+              Delete
+            </button>
+          )}
+        </div>
         {project.repository_owner && project.repository_name && (
           <p className={styles.meta}>{project.repository_owner}/{project.repository_name}</p>
         )}
@@ -84,21 +111,5 @@ const ProjectCard = ({ project }) => {
     </article>
   );
 };
-
-/** Placeholder card while the project list itself is loading. */
-export const ProjectCardSkeleton = () => (
-  <div className={styles.card} aria-hidden="true">
-    <div className={styles.text}>
-      <div className={`${styles.bar} ${styles.barName}`} />
-      <div className={`${styles.bar} ${styles.barMeta}`} />
-      <div className={`${styles.bar} ${styles.barMeta}`} />
-    </div>
-    <div className={styles.loadingSlot}>
-      <div className={styles.loadingBox}>
-        <LoadingDots />
-      </div>
-    </div>
-  </div>
-);
 
 export default ProjectCard;

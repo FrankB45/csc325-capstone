@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 export function useProjects() {
   const [state, setState] = useState({
@@ -6,6 +6,26 @@ export function useProjects() {
     isLoading: true,
     error: "",
   });
+
+  const removeProject = useCallback(async (id) => {
+    const response = await fetch(`/api/projects/${id}/`, { method: "DELETE" });
+
+    // 404 means it's already gone, so just drop it from the list.
+    if (!response.ok && response.status !== 404) {
+      let data = {};
+      try {
+        data = await response.json();
+      } catch {
+        /* no body */
+      }
+      throw new Error(data.error || "Could not delete the project.");
+    }
+
+    setState((previous) => ({
+      ...previous,
+      projects: previous.projects.filter((project) => project.id !== id),
+    }));
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -65,5 +85,5 @@ export function useProjects() {
     };
   }, []);
 
-  return state;
+  return { ...state, removeProject };
 }
