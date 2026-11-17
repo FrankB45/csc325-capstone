@@ -2,10 +2,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from .capture.errors import CaptureError      # ".." versions if your tests are in tests/
-from .capture.server import serve_directory
+from ..capture.errors import CaptureError      # ".." versions if your tests are in tests/
+from ..capture.server import serve_directory
 
-from .capture.browser import screenshot_page
+from ..capture.browser import screenshot_page
 
 
 def png_size(path):
