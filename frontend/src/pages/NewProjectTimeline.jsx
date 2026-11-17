@@ -535,10 +535,11 @@ const ProjectTimelineView = ({ project, commits }) => {
           />
         </div>
 
-        <div ref={modeRowRef} className={styles.modeRow} data-export-ignore>
-          <ModeToggle value={mode} onChange={handleModeChange} />
-        </div>
-
+        {commits.length > 1 && (
+          <div ref={modeRowRef} className={styles.modeRow} data-export-ignore>
+            <ModeToggle value={mode} onChange={handleModeChange} />
+          </div>
+        )}
         {overlayCommit && <CommitOverlay commit={overlayCommit} onClose={() => setOverlayCommit(null)} />}
         {downloadDialogOpen && (
           <Modal title="Download PNG" onClose={closeDownloadDialog}>
