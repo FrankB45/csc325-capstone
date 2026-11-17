@@ -9,7 +9,6 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 
 from .services.dependencies import (
-    _check_image_signature,
     _read_snapshot_bytes,
     _read_snapshot_text,
     check_repository_dependencies,
@@ -177,7 +176,7 @@ class RepositoryDependencyTests(TestCase):
         ])
         self.assertEqual(self.mock_get.call_args_list[2].kwargs["params"], {"recursive": "1"})
 
-    def test_existing_page_content_and_optional_tooling_remain_pending(self):
+    def test_existing_page_content_and_optional_tooling_do_not_cause_rejection(self):
         self.homepage_text = self.homepage_text.replace(
             '<div id="root"></div>', '<h1>My portfolio</h1><div id="root"></div>'
         )
@@ -188,10 +187,11 @@ class RepositoryDependencyTests(TestCase):
 
         result = self.check_dependencies()
 
-        self.assertEqual(result["dependency_status"], "pending")
+        self.assertEqual(result["dependency_status"], "passed")
+        self.assertIn("remain unverified", result["reason"])
         self.assertEqual(self.mock_get.call_count, 4)
 
-    def test_browser_ready_committed_entry_remains_pending_without_full_acceptance(self):
+    def test_committed_browser_javascript_passes_without_claiming_rendering_success(self):
         self.tree_data["tree"].append({
             "path": "src/unused-source.jsx", "mode": "100644", "type": "blob", "sha": "e" * 40,
         })
@@ -206,8 +206,10 @@ class RepositoryDependencyTests(TestCase):
 
                 result = self.check_dependencies()
 
-                self.assertEqual(result["dependency_status"], "pending")
-                self.assertIn("not been ruled out", result["reason"])
+                self.assertEqual(result["dependency_status"], "passed")
+                self.assertIn("JavaScript behavior, indirect resources", result["reason"])
+                self.assertIn("screenshot success remain unverified", result["reason"])
+                self.assertEqual(result["evidence_paths"], ["index.html", "src/main.js"])
                 self.assertEqual(self.mock_get.call_count, 5)
                 self.assertNotIn("setup_available", result)
 
@@ -217,7 +219,7 @@ class RepositoryDependencyTests(TestCase):
             original_homepage.replace("./src/main.js", "https://cdn.example.com/start.js"),
             original_homepage.replace("</head>", '<link rel="stylesheet" href="https://cdn.example.com/site.css"></head>'),
             original_homepage.replace("</head>", '<link rel="preload" href="https://cdn.example.com/font.woff2" as="font"></head>'),
-            original_homepage.replace('<div id="root"></div>', '<img src="https://cdn.example.com/logo.png">'),
+            original_homepage.replace('<div id="root"></div>', '<img src="https://cdn.example.com/logo.svg">'),
         )
         for homepage in homepages:
             with self.subTest(homepage=homepage):
@@ -225,13 +227,16 @@ class RepositoryDependencyTests(TestCase):
 
                 result = self.check_dependencies()
 
-                self.assertEqual(result["dependency_status"], "pending")
+                self.assertEqual(result["dependency_status"], "passed")
                 self.assertEqual(self.mock_get.call_count, 4)
+                for request in self.mock_get.call_args_list:
+                    self.assertTrue(request.args[0].startswith("https://api.github.com/repos/"))
 
     def test_optional_backend_interaction_with_native_content_passes_profile(self):
         self.homepage_text = (
             '<html><head><title>Contact</title></head><body><h1>Contact me</h1>'
-            '<form action="/api/contact" method="post"><input name="message">'
+            '<form action="/api/contact" method="post" onsubmit="event.preventDefault(); fetch(this.action)">'
+            '<input name="message">'
             '<button>Send</button></form></body></html>'
         )
 
@@ -240,8 +245,12 @@ class RepositoryDependencyTests(TestCase):
         self.assertEqual(result["dependency_status"], "passed")
         self.assertEqual(self.mock_get.call_count, 4)
 
-    def test_alternative_rendering_contexts_and_uncertain_markup_remain_pending(self):
+    def test_alternative_browser_contexts_do_not_trigger_the_narrow_startup_rejection(self):
         original_homepage = self.homepage_text
+        for path in ("site.css", "loader.js", "other.js"):
+            self.tree_data["tree"].append({
+                "path": path, "mode": "100644", "type": "blob", "sha": "e" * 40,
+            })
         homepages = (
             original_homepage.replace("</head>", '<base href="https://example.com/"></head>'),
             original_homepage.replace("</head>", '<style>body::before { content: "Hello"; }</style></head>'),
@@ -265,10 +274,11 @@ class RepositoryDependencyTests(TestCase):
 
                 result = self.check_dependencies()
 
-                self.assertEqual(result["dependency_status"], "pending")
+                self.assertEqual(result["dependency_status"], "passed")
+                self.assertIn("remain unverified", result["reason"])
                 self.assertEqual(self.mock_get.call_count, 4)
 
-    def test_unfamiliar_javascript_and_comment_or_string_matches_remain_pending(self):
+    def test_unrecognized_startup_syntax_does_not_establish_rejection(self):
         entries = (
             "", "not JavaScript", '/* import React from "react"; */',
             '// Optional tool\nimport React from "react";',
@@ -292,7 +302,8 @@ class RepositoryDependencyTests(TestCase):
 
                 result = self.check_dependencies()
 
-                self.assertEqual(result["dependency_status"], "pending")
+                self.assertEqual(result["dependency_status"], "passed")
+                self.assertIn("JavaScript behavior", result["reason"])
 
     def test_missing_startup_is_pending_even_with_a_package_manifest(self):
         self.tree_data["tree"].pop()
@@ -310,7 +321,7 @@ class RepositoryDependencyTests(TestCase):
         self.assertIn("missing or is not a regular file", result["reason"])
         self.assertEqual(self.mock_get.call_count, 4)
 
-    def test_unsupported_startup_urls_remain_pending(self):
+    def test_browser_urls_and_uncertain_references_do_not_establish_rejection(self):
         original_homepage = self.homepage_text
         sources = (
             "//cdn.example.com/start.js", "data:text/javascript,alert(1)",
@@ -323,7 +334,8 @@ class RepositoryDependencyTests(TestCase):
 
                 result = self.check_dependencies()
 
-                self.assertEqual(result["dependency_status"], "pending")
+                self.assertEqual(result["dependency_status"], "passed")
+                self.assertIn("remain unverified", result["reason"])
                 self.assertEqual(self.mock_get.call_count, 4)
 
     def test_missing_or_ambiguous_homepage_remains_pending(self):
@@ -483,7 +495,7 @@ class RepositoryDependencyTests(TestCase):
                 self.assertEqual(result["dependency_status"], "pending")
                 self.assertIn("UTF-8", result["reason"])
 
-    def test_malformed_or_unfamiliar_homepage_markup_remains_pending(self):
+    def test_markup_outside_the_startup_rule_does_not_establish_rejection(self):
         original_homepage = self.homepage_text
         homepages = (
             "", "not HTML", original_homepage.replace("</body>", ""),
@@ -501,7 +513,8 @@ class RepositoryDependencyTests(TestCase):
 
                 result = self.check_dependencies()
 
-                self.assertEqual(result["dependency_status"], "pending")
+                self.assertEqual(result["dependency_status"], "passed")
+                self.assertIn("remain unverified", result["reason"])
                 self.assertEqual(self.mock_get.call_count, 4)
 
     def test_invalid_url_and_missing_branch_do_not_establish_dependency_rejection(self):
@@ -523,12 +536,12 @@ class RepositoryDependencyTests(TestCase):
                 self.assertEqual(result["dependency_status"], "pending")
                 self.assertEqual(self.mock_get.call_count, 1)
 
-    def test_local_css_and_raster_image_pass_the_bounded_profile(self):
+    def test_local_css_and_images_need_presence_not_custom_content_validation(self):
         homepage = self.static_homepage.replace(
-            "</head>", '<link rel="stylesheet" href="/css/Site.css"></head>'
-        ).replace("</body>", '<img src="./images/Logo.PNG" alt="Logo"></body>')
+            "</head>", '<link rel="stylesheet" href="/css/Site.css?v=1"></head>'
+        ).replace("</body>", '<img src="./images/Logo.PNG#logo" alt="Logo"></body>')
         responses = self.make_static_responses(homepage, [
-            ("css/Site.css", 'body { color: #333; margin: 0; } .hero { padding: 8px; }'),
+            ("css/Site.css", 'body { color: rgba(0, 0, 0, 0.5); width: calc(100% - 2px); }'),
             ("images/Logo.PNG", self.png_content),
         ], homepage_path="INDEX.HTML")
 
@@ -537,27 +550,22 @@ class RepositoryDependencyTests(TestCase):
         self.assertEqual(result["dependency_status"], "passed")
         self.assertEqual(result["evidence_paths"], ["INDEX.HTML", "css/Site.css", "images/Logo.PNG"])
         self.assertEqual(result["tree_sha"], self.tree_sha)
-        self.assertIn("conforms", result["reason"])
-        self.assertIn("does not prove", result["reason"])
-        self.assertIn("screenshot success", result["reason"])
-        self.assertEqual(self.mock_get.call_count, 6)
+        self.assertIn("static-hosting prerequisite policy", result["reason"])
+        self.assertIn("resource contents are not validated", result["reason"])
+        self.assertEqual(self.mock_get.call_count, 4)
 
-    def test_inline_css_and_stylesheet_relative_images_are_inspected(self):
+    def test_inline_css_and_indirect_stylesheet_resources_are_not_interpreted(self):
         homepage = self.static_homepage.replace(
-            "</head>", '<style>h1 { color: navy; }</style><link rel="stylesheet" href="css/theme.css"></head>'
-        ).replace("<h1>", '<h1 style="margin: 0; padding: 4px">')
-        stylesheet = (
-            '/* url(missing-comment.png) */ .hero { background-image: url("../images/Bg.PNG"); } '
-            'p::before { content: "url(missing-string.png)"; }'
-        )
+            "</head>", '<style>h1 { color: rgba(0,0,0,.5); }</style><link rel="stylesheet" href="css/theme.css"></head>'
+        ).replace("<h1>", '<h1 style="width: calc(100% - 2px)">')
+        stylesheet = '@font-face { src: url(font.woff2); } .hero { background: url(../images/Bg.svg); }'
 
-        result = self.check_dependencies(self.make_static_responses(homepage, [
-            ("css/theme.css", stylesheet), ("images/Bg.PNG", self.png_content),
-        ]))
+        result = self.check_dependencies(self.make_static_responses(homepage, [("css/theme.css", stylesheet)]))
 
         self.assertEqual(result["dependency_status"], "passed")
-        self.assertEqual(result["evidence_paths"], ["index.html", "css/theme.css", "images/Bg.PNG"])
-        self.assertEqual(self.mock_get.call_count, 6)
+        self.assertEqual(result["evidence_paths"], ["index.html", "css/theme.css"])
+        self.assertIn("indirect resources", result["reason"])
+        self.assertEqual(self.mock_get.call_count, 4)
 
     def test_passive_external_resources_are_allowed_without_external_requests(self):
         homepage = self.static_homepage.replace(
@@ -568,7 +576,7 @@ class RepositoryDependencyTests(TestCase):
         result = self.check_dependencies(self.make_static_responses(homepage))
 
         self.assertEqual(result["dependency_status"], "passed")
-        self.assertIn("External resource availability", result["reason"])
+        self.assertIn("external availability", result["reason"])
         self.assertEqual(self.mock_get.call_count, 4)
         for request in self.mock_get.call_args_list:
             self.assertTrue(request.args[0].startswith("https://api.github.com/repos/"))
@@ -583,7 +591,7 @@ class RepositoryDependencyTests(TestCase):
         self.assertEqual(result["dependency_status"], "passed")
         self.assertEqual(self.mock_get.call_count, 4)
 
-    def test_visible_content_does_not_make_javascript_optional(self):
+    def test_scripts_events_and_other_browser_features_are_allowed_without_execution(self):
         homepages = (
             self.static_homepage.replace("</head>", '<script src="app.js"></script></head>'),
             self.static_homepage.replace("</head>", '<script src="https://cdn.example.com/app.js"></script></head>'),
@@ -597,11 +605,15 @@ class RepositoryDependencyTests(TestCase):
         )
         for homepage in homepages:
             with self.subTest(homepage=homepage):
-                result = self.check_dependencies(self.make_static_responses(homepage))
-                self.assertEqual(result["dependency_status"], "pending")
+                responses = self.make_static_responses(homepage, [("app.js", ""), ("other.html", "")])
+
+                result = self.check_dependencies(responses)
+
+                self.assertEqual(result["dependency_status"], "passed")
+                self.assertIn("JavaScript behavior", result["reason"])
                 self.assertEqual(self.mock_get.call_count, 4)
 
-    def test_unrecognized_css_or_uncertain_css_urls_remain_pending(self):
+    def test_css_contents_do_not_determine_dependency_eligibility(self):
         homepage = self.static_homepage.replace("</head>", '<link rel="stylesheet" href="css/site.css"></head>')
         stylesheets = (
             '@import "theme.css";', '.a { .b { color: red; } }', '$color: red;',
@@ -616,52 +628,61 @@ class RepositoryDependencyTests(TestCase):
         for stylesheet in stylesheets:
             with self.subTest(stylesheet=stylesheet):
                 result = self.check_dependencies(self.make_static_responses(homepage, [("css/site.css", stylesheet)]))
-                self.assertEqual(result["dependency_status"], "pending")
+                self.assertEqual(result["dependency_status"], "passed")
+                self.assertEqual(self.mock_get.call_count, 4)
 
-    def test_missing_nonregular_or_unrecognized_assets_remain_pending(self):
-        homepage = self.static_homepage.replace("</body>", '<img src="logo.png" alt="Logo"></body>')
-        result = self.check_dependencies(self.make_static_responses(homepage))
-        self.assertEqual(result["dependency_status"], "pending")
-        self.assertIn("missing or is not a regular file", result["reason"])
-        for content in (b"not an image", b"\x89PNG\r\n\x1a\n", b"<svg></svg>"):
-            with self.subTest(content=content):
-                result = self.check_dependencies(self.make_static_responses(homepage, [("logo.png", content)]))
+    def test_missing_or_nonregular_direct_resources_remain_pending(self):
+        resources = (
+            '<img src="missing.svg">',
+            '<script src="missing.js"></script>',
+            '<link rel="stylesheet" href="missing.css">',
+            '<link rel="preload" as="font" href="missing.woff2">',
+        )
+        for resource in resources:
+            with self.subTest(resource=resource):
+                homepage = self.static_homepage.replace("</body>", resource + "</body>")
+                result = self.check_dependencies(self.make_static_responses(homepage))
                 self.assertEqual(result["dependency_status"], "pending")
-                self.assertIn("not a recognized raster image", result["reason"])
-        responses = self.make_static_responses(homepage, [("logo.png", self.png_content)])
-        listing = responses[2].json()
-        listing["tree"][-1]["mode"] = "120000"
-        responses[2] = self.make_response(listing)
-        result = self.check_dependencies(responses)
-        self.assertEqual(result["dependency_status"], "pending")
+                self.assertIn("missing or is not a regular file", result["reason"])
+                self.assertEqual(self.mock_get.call_count, 4)
+        homepage = self.static_homepage.replace("</body>", '<img src="logo.svg"></body>')
+        for mode, entry_type in (("120000", "blob"), ("040000", "tree"), ("160000", "commit")):
+            with self.subTest(mode=mode):
+                responses = self.make_static_responses(homepage, [("logo.svg", "<svg/>")])
+                listing = responses[2].json()
+                listing["tree"][-1]["mode"] = mode
+                listing["tree"][-1]["type"] = entry_type
+                responses[2] = self.make_response(listing)
+                result = self.check_dependencies(responses)
+                self.assertEqual(result["dependency_status"], "pending")
+                self.assertEqual(self.mock_get.call_count, 4)
+
+    def test_duplicate_resources_are_checked_once_without_guessing_content_types(self):
+        homepage = self.static_homepage.replace("</body>", '<img src="logo.png"><img src="logo.png"></body>')
+        homepage = homepage.replace("</head>", '<link rel="stylesheet" href="logo.png"></head>')
+
+        result = self.check_dependencies(self.make_static_responses(homepage, [("logo.png", b"not decoded")]))
+
+        self.assertEqual(result["dependency_status"], "passed")
+        self.assertEqual(result["evidence_paths"], ["index.html", "logo.png"])
         self.assertEqual(self.mock_get.call_count, 4)
 
-    def test_duplicate_resources_are_read_once_and_conflicting_uses_stay_pending(self):
-        homepage = self.static_homepage.replace("</body>", '<img src="logo.png"><img src="logo.png"></body>')
-        result = self.check_dependencies(self.make_static_responses(homepage, [("logo.png", self.png_content)]))
+    def test_svg_fonts_and_other_committed_resource_formats_are_not_decoded(self):
+        homepage = self.static_homepage.replace(
+            "</head>", '<link rel="preload" as="font" href="font.woff2"></head>'
+        ).replace("</body>", '<svg><text>Hello</text></svg><img src="logo.svg"><img src="photo.avif"></body>')
+        responses = self.make_static_responses(homepage, [
+            ("font.woff2", b"not decoded"), ("logo.svg", "<svg/>"), ("photo.avif", b"not decoded"),
+        ])
+
+        result = self.check_dependencies(responses)
+
         self.assertEqual(result["dependency_status"], "passed")
-        self.assertEqual(self.mock_get.call_count, 5)
-        homepage = homepage.replace("</head>", '<link rel="stylesheet" href="logo.png"></head>')
-        result = self.check_dependencies(self.make_static_responses(homepage, [("logo.png", 'p { color: red; }')]))
-        self.assertEqual(result["dependency_status"], "pending")
-        self.assertIn("conflicting contexts", result["reason"])
+        self.assertEqual(result["evidence_paths"], ["index.html", "font.woff2", "logo.svg", "photo.avif"])
+        self.assertIn("resource contents are not validated", result["reason"])
+        self.assertEqual(self.mock_get.call_count, 4)
 
-    def test_raster_signatures_identify_formats_without_decoding_images(self):
-        # The three synthetic headers below test identification, not image decoding.
-        signatures = (
-            self.png_content,
-            b"\xff\xd8" + b"header-data" + b"\xff\xd9",
-            b"GIF89a\x01\x00\x01\x00\x00\x00\x00;",
-            b"RIFF\x0c\x00\x00\x00WEBPVP8 \x00\x00\x00\x00",
-        )
-        for content in signatures:
-            with self.subTest(content=content):
-                self.assertTrue(_check_image_signature(content))
-        for content in (b"", b"\xff\xd8\xff\xd9", b"GIF89a", b"RIFF", self.png_content[:-12]):
-            with self.subTest(content=content):
-                self.assertFalse(_check_image_signature(content))
-
-    def test_file_size_limit_returns_pending(self):
+    def test_required_file_size_limits_return_pending(self):
         with patch("git_gallery_app.services.dependencies.MAX_PROFILE_FILE_BYTES", 8):
             result = self.check_dependencies(self.make_static_responses(self.static_homepage))
         self.assertEqual(result["dependency_status"], "pending")
@@ -671,27 +692,62 @@ class RepositoryDependencyTests(TestCase):
             result = self.check_dependencies()
         self.assertEqual(result["dependency_status"], "pending")
         self.assertIn("per-file inspection limit", result["reason"])
+        # Stylesheets are no longer downloaded, so their size does not consume this budget.
         homepage = self.static_homepage.replace("</head>", '<link rel="stylesheet" href="site.css"></head>')
         with patch("git_gallery_app.services.dependencies.MAX_PROFILE_FILE_BYTES", 512):
             result = self.check_dependencies(self.make_static_responses(homepage, [("site.css", " " * 600)]))
-        self.assertEqual(result["dependency_status"], "pending")
-        self.assertIn("per-file inspection limit", result["reason"])
+        self.assertEqual(result["dependency_status"], "passed")
+        self.assertEqual(self.mock_get.call_count, 4)
 
-    def test_resource_count_limit_returns_pending(self):
-        homepage = self.static_homepage.replace("</body>", '<img src="a.png"><img src="b.png"></body>')
-        with patch("git_gallery_app.services.dependencies.MAX_PROFILE_RESOURCES", 1):
-            result = self.check_dependencies(self.make_static_responses(homepage, [
-                ("a.png", self.png_content), ("b.png", self.png_content),
-            ]))
-        self.assertEqual(result["dependency_status"], "pending")
-        self.assertIn("local-resource inspection limit", result["reason"])
-        self.assertEqual(self.mock_get.call_count, 5)
+    def test_twenty_five_local_resources_with_duplicates_pass_without_extra_requests(self):
+        resources = []
+        resource_paths = []
+        image_markup = ""
+        for resource_number in range(25):
+            resource_path = f"Images/Photo{resource_number:02d}.SVG"
+            resources.append((resource_path, "<svg/>"))
+            resource_paths.append(resource_path)
+            image_markup += f'<img src="{resource_path}">'
+        image_markup += '<img src="Images/Photo00.SVG"><img src="Images/Photo24.SVG">'
+        homepage = self.static_homepage.replace("</body>", image_markup + "</body>")
+        responses = self.make_static_responses(homepage, resources, homepage_path="INDEX.HTML")
 
-    def test_total_decoded_content_limit_returns_pending(self):
-        homepage = self.static_homepage.replace("</body>", '<img src="logo.png"></body>')
-        limit = len(homepage.encode("utf-8")) + len(self.png_content) - 1
+        # Only metadata, revision, tree and homepage responses are available.
+        result = self.check_dependencies(responses[:4])
+
+        self.assertEqual(result["dependency_status"], "passed")
+        self.assertEqual(result["evidence_paths"], ["INDEX.HTML"] + resource_paths)
+        self.assertEqual(result["tree_sha"], self.tree_sha)
+        self.assertEqual(self.mock_get.call_count, 4)
+
+    def test_missing_twenty_first_local_resource_still_remains_pending(self):
+        resources = []
+        resource_paths = []
+        image_markup = ""
+        for resource_number in range(20):
+            resource_path = f"Images/Photo{resource_number:02d}.SVG"
+            resources.append((resource_path, "<svg/>"))
+            resource_paths.append(resource_path)
+            image_markup += f'<img src="{resource_path}">'
+        image_markup += '<img src="Images/Missing21.SVG">'
+        homepage = self.static_homepage.replace("</body>", image_markup + "</body>")
+        responses = self.make_static_responses(homepage, resources)
+
+        result = self.check_dependencies(responses[:4])
+
+        self.assertEqual(result["dependency_status"], "pending")
+        self.assertEqual(
+            result["reason"],
+            "Local resource 'Images/Missing21.SVG' is missing or is not a regular file.",
+        )
+        self.assertEqual(result["evidence_paths"], ["index.html"] + resource_paths)
+        self.assertEqual(result["tree_sha"], self.tree_sha)
+        self.assertEqual(self.mock_get.call_count, 4)
+
+    def test_total_required_content_limit_returns_pending(self):
+        limit = len(self.homepage_text.encode("utf-8")) + len(self.startup_text.encode("utf-8")) - 1
         with patch("git_gallery_app.services.dependencies.MAX_PROFILE_CONTENT_BYTES", limit):
-            result = self.check_dependencies(self.make_static_responses(homepage, [("logo.png", self.png_content)]))
+            result = self.check_dependencies()
         self.assertEqual(result["dependency_status"], "pending")
         self.assertIn("total decoded file-content inspection limit", result["reason"])
 
@@ -751,19 +807,18 @@ class RepositoryDependencyTests(TestCase):
         with self.assertRaises(UnicodeDecodeError):
             _read_snapshot_text("example", "site", self.homepage_sha)
 
-    def test_new_resource_retrieval_failures_are_unavailable(self):
+    def test_css_and_image_contents_are_not_downloaded(self):
         homepage = self.static_homepage.replace(
             "</head>", '<link rel="stylesheet" href="site.css"></head>'
         ).replace("</body>", '<img src="logo.png"></body>')
-        for request_number in (4, 5):
-            for failure in (self.make_response({}, 404), requests.Timeout(), self.make_response({})):
-                with self.subTest(request_number=request_number, failure=type(failure).__name__):
-                    responses = self.make_static_responses(homepage, [
-                        ("site.css", 'p { color: red; }'), ("logo.png", self.png_content),
-                    ])
-                    responses[request_number] = failure
-                    result = self.check_dependencies(responses)
-                    self.assertEqual(result["dependency_status"], "unavailable")
+        responses = self.make_static_responses(homepage, [("site.css", ""), ("logo.png", b"")])
+        responses[4] = AssertionError("Stylesheet contents must not be downloaded.")
+        responses[5] = AssertionError("Image contents must not be downloaded.")
+
+        result = self.check_dependencies(responses)
+
+        self.assertEqual(result["dependency_status"], "passed")
+        self.assertEqual(self.mock_get.call_count, 4)
 
     def test_positive_profile_requires_a_complete_validated_snapshot(self):
         for truncated in (True, "false", None):
@@ -821,11 +876,11 @@ class RepositoryDependencyTests(TestCase):
                 )
 
                 self.assertEqual(result["dependency_status"], "passed")
-                self.assertIn("conforms to the bounded passive", result["reason"])
+                self.assertIn("static-hosting prerequisite policy", result["reason"])
                 self.assertEqual(result["evidence_paths"], ["index.html"])
                 self.assertEqual(self.mock_get.call_count, 5)
 
-    def test_false_declaration_does_not_make_unfamiliar_javascript_pass(self):
+    def test_false_declaration_does_not_bypass_the_browser_script_checks(self):
         declaration = json.dumps({"initial_appearance_requires_backend": False})
         responses = self.make_declaration_responses(
             declaration, self.homepage_text, 'document.getElementById("root").textContent = "Hello";'
@@ -833,9 +888,16 @@ class RepositoryDependencyTests(TestCase):
 
         result = self.check_dependencies(responses)
 
-        self.assertEqual(result["dependency_status"], "pending")
-        self.assertIn("not been ruled out", result["reason"])
+        self.assertEqual(result["dependency_status"], "passed")
+        self.assertIn("JavaScript behavior", result["reason"])
+        self.assertEqual(result["evidence_paths"], ["index.html", "src/main.js"])
         self.assertEqual(self.mock_get.call_count, 6)
+
+        # False is not acceptance by itself: a definitely missing startup still stays pending.
+        responses = self.make_declaration_responses(declaration, self.homepage_text)
+        result = self.check_dependencies(responses)
+        self.assertEqual(result["dependency_status"], "pending")
+        self.assertIn("missing or is not a regular file", result["reason"])
 
     def test_invalid_declarations_block_a_passive_profile_with_pending(self):
         declarations = (
@@ -894,8 +956,8 @@ class RepositoryDependencyTests(TestCase):
         self.assertIn("git-gallery.json", result["reason"])
         self.assertEqual(result["evidence_paths"], ["git-gallery.json"])
 
-    def test_g_homepage_without_a_declaration_remains_pending(self):
-        # Source-shaped fixture from G at 6d0d57a4; this does not execute or inspect its backend.
+    def test_undeclared_g_style_backend_usage_is_outside_this_limited_detection(self):
+        # Source-shaped fixture from G at 6d0d57a4; its backend and script are never executed.
         homepage = (
             '<!doctype html><html lang="en"><head><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width,initial-scale=1">'
@@ -905,11 +967,15 @@ class RepositoryDependencyTests(TestCase):
             '<div id="forecast" role="status">Connecting to forecast service…</div>'
             '</main><script src="app.js"></script></body></html>'
         )
+        responses = self.make_static_responses(homepage, [
+            ("styles.css", ""), ("app.js", 'fetch("/api/forecast");'),
+        ])
 
-        result = self.check_dependencies(self.make_static_responses(homepage))
+        result = self.check_dependencies(responses)
 
-        self.assertEqual(result["dependency_status"], "pending")
-        self.assertEqual(result["evidence_paths"], ["index.html"])
+        self.assertEqual(result["dependency_status"], "passed")
+        self.assertIn("Undeclared backend or build requirements may not be detected", result["reason"])
+        self.assertEqual(result["evidence_paths"], ["index.html", "styles.css", "app.js"])
         self.assertEqual(self.mock_get.call_count, 4)
 
     def test_declaration_retrieval_failures_are_unavailable(self):
@@ -991,4 +1057,117 @@ class RepositoryDependencyTests(TestCase):
             "evidence_paths": ["git-gallery.json"],
             "tree_sha": self.tree_sha,
         })
+        self.assertEqual(self.mock_get.call_count, 4)
+
+    def test_inspected_task_tracker_fixture_can_enter_setup_through_the_real_endpoint(self):
+        # Based on Greenish-Eyes/my-first-repo at 1a7793497f3ec4e025cfc801462974226cff860a.
+        # These committed files are only fixture text; the test never runs the website.
+        homepage = """<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Task Tracker</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Task Tracker</h1>
+      <ul id="tasks">
+        <li>Task 1</li>
+        <li>Task 2</li>
+        <li>Task 3</li>
+      </ul>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
+"""
+        script = """/*
+  This is just a sample project for my Git crash course. It doesn't do anything.
+*/
+
+console.log('Task Tracker Running...');
+"""
+        # Representative CSS from the same snapshot, including the formerly blocked rgba().
+        stylesheet = """body {
+  font-family: 'Roboto', sans-serif;
+  background-color: #f4f4f4;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  width: 100%;
+}
+.container {
+  width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  background-color: #fff;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+"""
+        dependency_responses = self.make_static_responses(homepage, [
+            ("style.css", stylesheet), ("script.js", script),
+        ])
+        responses = [
+            self.make_response(self.repository_data),
+            self.make_response([{"sha": "1" * 40}, {"sha": "2" * 40}, {"sha": "3" * 40}]),
+            self.make_response(self.repository_data),
+            self.make_response(self.commit_data),
+            self.make_response(dependency_responses[2].json()),
+        ]
+        responses.extend(dependency_responses)
+        self.mock_get.side_effect = responses
+        with patch(
+            "git_gallery_app.services.analyses._get_collection",
+            side_effect=AssertionError("No application storage access."),
+        ):
+            response = APIClient().post(
+                reverse("check-repository-compatibility"), {"url": self.repo_url}, format="json"
+            )
+
+        self.assertEqual(response.status_code, 200)
+        report = response.json()
+        self.assertEqual(report["overall_status"], "accepted")
+        self.assertIs(report["setup_available"], True)
+        self.assertIs(report["same_snapshot_guaranteed"], False)
+        self.assertEqual(report["history"]["history_status"], "passed")
+        self.assertEqual(report["history"]["commit_count"], 3)
+        self.assertEqual(report["html"]["html_status"], "passed")
+        self.assertEqual(report["html"]["html_pages"], ["index.html"])
+        self.assertEqual(report["dependencies"]["status"], "passed")
+        self.assertEqual(report["dependencies"]["tree_sha"], self.tree_sha)
+        self.assertEqual(report["dependencies"]["evidence_paths"], ["index.html", "style.css", "script.js"])
+        self.assertIn("JavaScript behavior, indirect resources", report["dependencies"]["reason"])
+        self.assertIn("external availability and screenshot success remain unverified", report["dependencies"]["reason"])
+        self.assertEqual(self.mock_get.call_count, 9)
+
+    def test_base_urls_and_unresolved_references_are_qualified_without_false_missing_files(self):
+        homepages = (
+            self.static_homepage.replace("</head>", '<base href="https://cdn.example.com/site/"></head>')
+                .replace("</body>", '<script src="app.js"></script></body>'),
+            self.static_homepage.replace("</body>", '<img src="data:image/svg+xml,example"></body>'),
+        )
+        for homepage in homepages:
+            with self.subTest(homepage=homepage):
+                result = self.check_dependencies(self.make_static_responses(homepage))
+                self.assertEqual(result["dependency_status"], "passed")
+                self.assertEqual(result["evidence_paths"], ["index.html"])
+                self.assertIn("remain unverified", result["reason"])
+                self.assertEqual(self.mock_get.call_count, 4)
+        self.assertIn("could not be resolved", result["reason"])
+
+    def test_conflicting_resource_attributes_do_not_establish_a_missing_file(self):
+        homepage = self.static_homepage.replace(
+            "</body>", '<img src="logo.svg" src="missing.svg"></body>'
+        )
+
+        result = self.check_dependencies(self.make_static_responses(homepage, [("logo.svg", "<svg/>")]))
+
+        self.assertEqual(result["dependency_status"], "passed")
+        self.assertIn("could not be resolved", result["reason"])
         self.assertEqual(self.mock_get.call_count, 4)
