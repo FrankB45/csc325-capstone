@@ -1,6 +1,8 @@
 from ..models import Capture, Job, Project, RepositorySnapshot
 from django.urls import reverse
 from .github import parse_github_url
+from django.conf import settings
+import shutil
 
 
 def get_project_details(project):
@@ -65,10 +67,16 @@ def get_project_details(project):
         for capture in job.captures
     )
 
+    available_pages = list(snapshot.available_pages or [])
+    if not available_pages:
+        available_pages = [job.page_path]
+
     result["analysis"] = {
         "job_id": str(job.pk),
         "snapshot_id": str(snapshot.pk),
         "page_path": job.page_path,
+        "default_page": snapshot.default_page or job.page_path,
+        "available_pages": available_pages,
         "status": job.status,
         "error_message": job.error_message,
         "created_at": job.created_at,
@@ -175,3 +183,33 @@ def _project_summary(project, job):
             if thumbnail else None
         ),
     }
+
+class ProjectBusyError(Exception):
+    pass
+
+
+def delete_project(project):
+    """Delete a project, its snapshots, jobs, and screenshot files."""
+    snapshot_ids = list(
+        RepositorySnapshot.objects
+        .filter(project=project)
+        .values_list("pk", flat=True)
+    )
+    jobs = list(Job.objects.filter(repo_snapshot_id__in=snapshot_ids))
+
+    # The worker keeps saving progress to a job, so don't pull it out from under it.
+    if any(job.status in (Job.Status.QUEUED, Job.Status.PROCESSING) for job in jobs):
+        raise ProjectBusyError("This project is still being processed. Try again once it finishes.")
+
+    job_ids = [str(job.pk) for job in jobs]
+
+    Job.objects.filter(repo_snapshot_id__in=snapshot_ids).delete()
+    RepositorySnapshot.objects.filter(pk__in=snapshot_ids).delete()
+    project.delete()
+
+    # Best effort: a leftover folder shouldn't make the delete fail.
+    root = settings.SCREENSHOT_ROOT.resolve()
+    for job_id in job_ids:
+        folder = (root / job_id).resolve()
+        if folder.is_relative_to(root) and folder != root:
+            shutil.rmtree(folder, ignore_errors=True)

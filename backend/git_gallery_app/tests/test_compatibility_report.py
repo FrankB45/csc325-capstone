@@ -284,7 +284,10 @@ class RepositoryCompatibilityReportTests(TestCase):
 
     def test_explicit_passes_make_setup_available_under_the_limited_profile(self):
         self.dependency_result["dependency_status"] = "passed"
-        self.dependency_result["reason"] = "The homepage conforms to the bounded passive profile."
+        self.dependency_result["reason"] = (
+            "The homepage meets the static-hosting prerequisite policy. JavaScript behavior, "
+            "indirect resources, external availability and screenshot success remain unverified."
+        )
         self.dependency_result["evidence_paths"] = ["INDEX.HTML", "css/site.css", "images/logo.png"]
         original_history = deepcopy(self.history_result)
         original_html = deepcopy(self.html_result)

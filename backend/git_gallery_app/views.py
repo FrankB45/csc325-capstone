@@ -21,7 +21,7 @@ from bson import ObjectId
 from bson.errors import InvalidId
 
 from .models import Project, Capture, Job
-from .services.projects import get_project_details, get_project_summaries
+from .services.projects import ProjectBusyError, delete_project, get_project_details, get_project_summaries
 
 from pathlib import Path
 
@@ -251,3 +251,18 @@ def get_projects(request):
         "projects": get_project_summaries(),
     })
 
+@api_view(["GET", "DELETE"])
+def get_project(request, project_id):
+    try:
+        project = Project.objects.get(pk=ObjectId(project_id))
+    except (InvalidId, Project.DoesNotExist):
+        return Response({"error": "Project not found."}, status=404)
+
+    if request.method == "DELETE":
+        try:
+            delete_project(project)
+        except ProjectBusyError as error:
+            return Response({"error": str(error)}, status=409)
+        return Response(status=204)
+
+    return Response(get_project_details(project))
