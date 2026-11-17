@@ -7,54 +7,32 @@ import Spinner from "../components/Spinner/Spinner.jsx";
 import CommitPicker from "../components/CommitPicker/CommitPicker.jsx";
 import { useRepositoryLookup } from "../hooks/useRepositoryLookup.js";
 import { MIN_COMMITS, MAX_COMMITS } from "../utils/commits.js";
+import { isValidUpdateReview, postJSON, prepareProjectSetup } from "../utils/projectSetup.js";
 import styles from "./NewProject.module.css";
 import watermark from "../assets/octocat-watermark.svg";
 
-async function postJSON(path, body, signal) {
-  const response = await fetch(path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    signal,
-  });
-
-  const data = await response.json();
-
-  if (!response.ok) {
-    const message = data.error || data.detail || data.reason;
-    const fields = Object.entries(data)
-      .map(([field, errors]) =>
-        field + ": " + (Array.isArray(errors) ? errors.join(" ") : JSON.stringify(errors))
-      )
-      .join(" ");
-
-    throw new Error(
-      (Array.isArray(message) ? message.join(" ") : message) ||
-      fields ||
-      "The request failed. Please try again."
-    );
-  }
-
-  return data;
-}
-
-const NewProject = () => {
+const NewProject = (props) => {
+  const { updateReview, onCancelReview } = props;
+  // Even an invalid explicit review prop must never fall back to project creation.
+  const isUpdateReview = "updateReview" in props || "onCancelReview" in props;
+  const review = isValidUpdateReview(updateReview) ? updateReview : null;
   const navigate = useNavigate();
   const urlId = useId();
   const titleId = useId();
   const errorId = useId();
   const pageId = useId();
+  const reviewNoticeId = useId();
 
   const requestRef = useRef(null);
 
   const { repository, error: lookupError, lookup, reset } = useRepositoryLookup();
-  const [step, setStep] = useState("url"); // "url" | "setup" | "creating"
+  const [step, setStep] = useState(review ? "setup" : "url"); // "url" | "setup" | "creating"
   const [url, setUrl] = useState("");
-  const [title, setTitle] = useState("");
-  const [pages, setPages] = useState([]);
-  const [pagePath, setPagePath] = useState("");
-  const [commits, setCommits] = useState([]);
-  const [selectedIds, setSelectedIds] = useState([]);
+  const [title, setTitle] = useState(review?.projectTitle || "");
+  const [pages, setPages] = useState(() => review ? [...review.pages] : []);
+  const [pagePath, setPagePath] = useState(review?.pagePath || "");
+  const [commits, setCommits] = useState(() => review ? [...review.commits] : []);
+  const [selectedIds, setSelectedIds] = useState(() => review ? [...review.selectedIds] : []);
   const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState("");
 
@@ -70,7 +48,7 @@ const NewProject = () => {
 
   async function handleUrlSubmit(event) {
     event.preventDefault();
-    if (requestRef.current) return;
+    if (isUpdateReview || requestRef.current) return;
 
     const controller = new AbortController();
     requestRef.current = controller;
@@ -81,54 +59,15 @@ const NewProject = () => {
       const repo = await lookup(url);
       if (!repo || controller.signal.aborted) return;
 
-      const report = await postJSON(
-        "/api/repo/compatibility/",
-        { url: repo.url },
-        controller.signal
-      );
-
-      if (!report.setup_available) {
-        const checks = [
-          [report.history?.history_status, report.history?.reason],
-          [report.html?.html_status, report.html?.reason],
-          [report.dependencies?.status, report.dependencies?.reason],
-        ];
-        const problem = checks.find(([status]) => status !== "passed");
-
-        throw new Error(
-          problem?.[1] || report.reason || "This repository is not supported."
-        );
-      }
-
-      const history = await postJSON(
-        "/api/repo/commits/",
-        { url: repo.url },
-        controller.signal
-      );
+      const setup = await prepareProjectSetup(repo.url, controller.signal);
 
       if (controller.signal.aborted) return;
 
-      const availablePages = report.html.html_pages;
-
-      if (!availablePages.length || !history.commits.length) {
-        throw new Error("No pages or commits are available for capture.");
-      }
-
       setTitle(repo.name);
-      setPages(availablePages);
-      setPagePath(
-        availablePages.find((path) => path.toLowerCase() === "index.html") ||
-        availablePages[0]
-      );
-
-      setCommits(
-        history.commits.map((commit) => ({
-          ...commit,
-          id: commit.sha,
-        }))
-      );
-
-      setSelectedIds(history.preselected);
+      setPages(setup.pages);
+      setPagePath(setup.pagePath);
+      setCommits(setup.commits);
+      setSelectedIds(setup.selectedIds);
       setStep("setup");
     } catch (err) {
       if (!controller.signal.aborted) {
@@ -142,6 +81,7 @@ const NewProject = () => {
 
   async function handleSetupSubmit(event) {
     event.preventDefault();
+    if (isUpdateReview) return;
     if (!canSubmit || requestRef.current) return;
 
     const controller = new AbortController();
@@ -174,14 +114,22 @@ const NewProject = () => {
     }
   }
 
-  function changeUrl() {
-    reset();
-    setError("");
-    setPages([]);
-    setPagePath("");
-    setCommits([]);
-    setSelectedIds([]);
-    setStep("url");
+  function handleReviewSubmit(event) {
+    event.preventDefault();
+  }
+
+  if (isUpdateReview && (!review || typeof onCancelReview !== "function")) {
+    return (
+      <PageLayout width="narrow" watermark>
+        <h1 className={styles.title}>Review update</h1>
+        <p role="alert" className={styles.error}>
+          Update review could not be opened. Return to the project and check again.
+        </p>
+        {typeof onCancelReview === "function"
+          ? <CancelButton onClick={onCancelReview} />
+          : <CancelButton to="/gallery">Back to Gallery</CancelButton>}
+      </PageLayout>
+    );
   }
 
   if (step === "creating") {
@@ -228,20 +176,22 @@ const NewProject = () => {
   if (step === "setup") {
     return (
       <PageLayout width="narrow" watermark>
-        <h1 className={styles.title}>New Project</h1>
-        <form className={styles.form} onSubmit={handleSetupSubmit}>
+        <h1 className={styles.title}>{isUpdateReview ? "Review update" : "New Project"}</h1>
+        <form className={styles.form} onSubmit={isUpdateReview ? handleReviewSubmit : handleSetupSubmit}>
           <div className={styles.field}>
             <label className={styles.label} htmlFor={urlId}>GitHub Repository URL</label>
             <input
               id={urlId}
               className={styles.input}
-              value={repository.url}
+              value={isUpdateReview ? review.repositoryUrl : repository.url}
               readOnly
             />
 
-            <CancelButton onClick={changeUrl}>
-              Change repository
-            </CancelButton>
+            {!isUpdateReview && (
+              <CancelButton onClick={changeUrl}>
+                Change repository
+              </CancelButton>
+            )}
 
           </div>
 
@@ -252,6 +202,7 @@ const NewProject = () => {
               className={styles.input}
               value={title}
               onChange={(event) => setTitle(event.target.value)}
+              readOnly={isUpdateReview}
               maxLength={200}
               required
             />
@@ -277,7 +228,11 @@ const NewProject = () => {
             </select>
           </div>
 
-          <p>Screenshots will appear after you create the project.</p>
+          {isUpdateReview ? (
+            <p id={reviewNoticeId} role="status">
+              Review only. Saving updates is not available yet. Cancel returns to your saved project.
+            </p>
+          ) : <p>Screenshots will appear after you create the project.</p>}
 
           <CommitPicker
             commits={commits}
@@ -292,11 +247,19 @@ const NewProject = () => {
           )}
 
           <div className={styles.actions}>
-            <NextButton disabled={!canSubmit}>
-              Create project
-            </NextButton>
-
-            <CancelButton to="/" />
+            {isUpdateReview ? (
+              <>
+                <NextButton type="button" disabled aria-describedby={reviewNoticeId}>
+                  Save update
+                </NextButton>
+                <CancelButton onClick={onCancelReview} />
+              </>
+            ) : (
+              <>
+                <NextButton disabled={!canSubmit}>Create project</NextButton>
+                <CancelButton to="/" />
+              </>
+            )}
           </div>
         </form>
       </PageLayout>

@@ -10,7 +10,10 @@ import EmptyCommitSlot from "../components/EmptyCommitSlot/EmptyCommitSlot.jsx";
 import Timeline from "../components/Timeline/Timeline.jsx";
 import CommitOverlay from "../components/CommitOverlay/CommitOverlay.jsx";
 import Modal from "../components/Modal/Modal.jsx";
+import SyncButton from "../components/SyncButton/SyncButton.jsx";
 import AIAssistant from "../components/AIAssistant/AIAssistant.jsx";
+import NewProject from "./NewProject.jsx";
+import { prepareProjectSetup } from "../utils/projectSetup.js";
 import styles from "./ProjectTimeline.module.css";
 
 const FULL_SCREENSHOT_VIEW_WIDTH = 1100;
@@ -344,7 +347,16 @@ const ProjectTimelineView = ({ project, commits }) => {
   const [overlayCommit, setOverlayCommit] = useState(null);
   const [downloadError, setDownloadError] = useState("");
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncError, setSyncError] = useState("");
+  const [updateReview, setUpdateReview] = useState(null);
+  const syncRequestRef = useRef(null);
   const modeRowRef = useRef(null);
+
+  useEffect(() => () => {
+    syncRequestRef.current?.abort();
+    syncRequestRef.current = null;
+  }, []);
 
   useEffect(() => {
     if (availablePages.length > 0 && !availablePages.includes(selectedPage)) {
@@ -400,6 +412,41 @@ const ProjectTimelineView = ({ project, commits }) => {
 
   const closeDownloadDialog = useCallback(() => setDownloadDialogOpen(false), []);
 
+  async function handleSync() {
+    if (syncRequestRef.current) return;
+
+    const controller = new AbortController();
+    syncRequestRef.current = controller;
+    setIsSyncing(true);
+    setSyncError("");
+
+    try {
+      const setup = await prepareProjectSetup(project.repository_url, controller.signal);
+      if (controller.signal.aborted || syncRequestRef.current !== controller) return;
+
+      setUpdateReview({
+        sourceProjectId: project.id,
+        sourceJobId: analysis.job_id,
+        repositoryUrl: project.repository_url,
+        projectTitle: project.name,
+        ...setup,
+      });
+    } catch (error) {
+      if (!controller.signal.aborted && syncRequestRef.current === controller) {
+        setSyncError(error.message || "Could not prepare update review. Please try again.");
+      }
+    } finally {
+      if (syncRequestRef.current === controller) {
+        syncRequestRef.current = null;
+        if (!controller.signal.aborted) setIsSyncing(false);
+      }
+    }
+  }
+
+  function cancelUpdateReview() {
+    setUpdateReview(null);
+  }
+
   async function handleDownload(type, commitToExport) {
     setDownloadError("");
     try {
@@ -445,6 +492,10 @@ const ProjectTimelineView = ({ project, commits }) => {
 
   // TODO: call the backend AI endpoint.
   const handleAsk = async () => "The AI Assistant isn’t connected to the backend yet.";
+
+  if (updateReview) {
+    return <NewProject updateReview={updateReview} onCancelReview={cancelUpdateReview} />;
+  }
 
   return (
     <PageLayout width="timeline" watermark="center">
@@ -496,7 +547,13 @@ const ProjectTimelineView = ({ project, commits }) => {
               />
             </div>
           </div>
+          <div className={styles.sync}>
+            <SyncButton syncing={isSyncing} onClick={handleSync} />
+          </div>
         </div>
+
+        {isSyncing && <p role="status" data-export-ignore>Checking repository…</p>}
+        {syncError && <p role="alert" data-export-ignore>{syncError}</p>}
 
         <section
           className={styles.stage}
@@ -639,7 +696,7 @@ const ProjectTimelineLoader = ({ projectId }) => {
 
   return (
     <ProjectTimelineView
-      key={project.analysis.job_id}
+      key={`${project.id}:${project.analysis.job_id}:${project.repository_url}`}
       project={project}
       commits={commits}
     />
