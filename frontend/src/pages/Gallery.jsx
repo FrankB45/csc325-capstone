@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import PageLayout from "../components/PageLayout/PageLayout.jsx";
 import NewProjectButton from "../components/New Project Button/NewProjectButton.jsx";
 import ProjectCard, { ProjectCardSkeleton } from "../components/ProjectCard/ProjectCard.jsx";
@@ -18,12 +18,11 @@ const Gallery = () => {
   const [deleteError, setDeleteError] = useState("");
 
   const pageCount = Math.ceil(projects.length / PAGE_SIZE);
-  const visible = projects.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
-
-  // If the last card on a page is deleted, step back to the previous page.
-  useEffect(() => {
-    if (page > 0 && page >= pageCount) setPage(Math.max(pageCount - 1, 0));
-  }, [page, pageCount]);
+  const currentPage = Math.min(page, Math.max(pageCount - 1, 0));
+  const visible = projects.slice(
+    currentPage * PAGE_SIZE,
+    currentPage * PAGE_SIZE + PAGE_SIZE,
+  );
 
   const closeDialog = useCallback(() => {
     setPendingDelete(null);
@@ -35,6 +34,12 @@ const Gallery = () => {
     setDeleteError("");
     try {
       await removeProject(pendingDelete.id);
+      setPage((current) =>
+        Math.min(
+          current,
+          Math.max(Math.ceil((projects.length - 1) / PAGE_SIZE) - 1, 0),
+        ),
+      );
       setPendingDelete(null);
     } catch (err) {
       setDeleteError(err.message || "Could not delete the project.");
@@ -70,7 +75,7 @@ const Gallery = () => {
         </div>
       )}
 
-      {pageCount > 1 && <Pager pageCount={pageCount} page={page} onChange={setPage} />}
+      {pageCount > 1 && <Pager pageCount={pageCount} page={currentPage} onChange={setPage} />}
 
       {pendingDelete && (
         <Modal title="Delete project" onClose={closeDialog}>
