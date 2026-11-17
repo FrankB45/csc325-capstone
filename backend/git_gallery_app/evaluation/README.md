@@ -5,6 +5,9 @@ repository analyses. It supplies a predefined task plus synthetic Git data to
 the adapter; it does not model a chatbot, arbitrary questions, conversation
 history, or follow-up clarification.
 
+The suite lives at `backend/git_gallery_app/evaluation/`, inside the Django
+application package and separate from the app's existing tests.
+
 ## Supported task scope
 
 The README, Sprint 0 user stories, and project FAQ describe these AI analysis
@@ -100,7 +103,7 @@ rationales and subtle semantic changes still need review.
 From the repository root, run the full suite with one command:
 
 ```powershell
-python backend\evaluation\run_evaluation.py
+python backend\git_gallery_app\evaluation\run_evaluation.py
 ```
 
 Default `mock` mode returns the independently authored expected outputs. Its
@@ -108,13 +111,13 @@ PASS result validates the runner and checks only; it is **not a real LLM
 evaluation**. Real mode never falls back to mock:
 
 ```powershell
-python backend\evaluation\run_evaluation.py --mode real
+python backend\git_gallery_app\evaluation\run_evaluation.py --mode real
 ```
 
 Run evaluation-logic tests:
 
 ```powershell
-python -m unittest discover -s backend\evaluation -p "test_*.py" -v
+python -m unittest discover -s backend\git_gallery_app\evaluation -p "test_*.py" -v
 ```
 
 ## Task-specific output proposals and integration
