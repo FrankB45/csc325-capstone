@@ -183,7 +183,8 @@ class RepositoryCompatibilityApiTests(APISimpleTestCase):
         self.report["setup_available"] = True
         self.report["dependencies"]["status"] = "passed"
         self.report["dependencies"]["reason"] = (
-            "The homepage conforms to the bounded passive profile; screenshot success is unverified."
+            "The homepage meets the static-hosting prerequisite policy. JavaScript behavior, "
+            "indirect resources, external availability and screenshot success remain unverified."
         )
         self.report["reason"] = (
             "The repository meets the limited supported-site profile for entering project setup. "
@@ -198,6 +199,8 @@ class RepositoryCompatibilityApiTests(APISimpleTestCase):
         self.assertEqual(response.json(), original_report)
         self.assertEqual(self.report, original_report)
         self.assertEqual(response.json()["dependencies"]["status"], "passed")
+        self.assertEqual(response.json()["dependencies"]["reason"], original_report["dependencies"]["reason"])
+        self.assertIn("remain unverified", response.json()["dependencies"]["reason"])
         self.assertEqual(response.json()["overall_status"], "accepted")
         self.assertIs(response.json()["setup_available"], True)
         self.assertIs(response.json()["same_snapshot_guaranteed"], False)

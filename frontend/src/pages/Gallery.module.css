@@ -24,3 +24,11 @@
 
 @media (max-width: 1000px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 40px; } }
 @media (max-width: 640px)  { .grid { grid-template-columns: minmax(0, 1fr); } }
+
+
+.confirm { padding: 32px; max-width: 480px; }
+.confirm h2 { margin: 0 0 12px; color: var(--color-navy); }
+.confirm p { margin: 0 0 16px; color: var(--color-purple); }
+.confirmActions { display: flex; align-items: center; justify-content: flex-end; gap: 20px; }
+.confirmDelete { padding: 10px 22px; border: none; border-radius: 8px; background: var(--color-error); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+.confirmDelete:disabled { opacity: 0.6; cursor: default; }

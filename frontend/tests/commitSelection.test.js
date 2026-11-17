@@ -1,5 +1,6 @@
+/* global test, expect */
 // Vitest/Jest-style; adjust the import of `test`/`expect` to your runner.
-import { defaultSelection } from "../../../frontend/src/components/commitSelection.js";
+import { defaultSelection } from "../src/components/commitSelection.js";
  
 const mk = (n) => Array.from({ length: n }, (_, i) => ({ sha: String(i).padStart(40, "0") }));
  

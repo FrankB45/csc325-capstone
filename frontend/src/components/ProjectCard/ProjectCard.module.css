@@ -1,6 +1,7 @@
 .card { display: flex; flex-direction: column; min-width: 0; }
 
 .text { padding: 0 10px; }
+.headingRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .name { margin: 0; font-size: clamp(24px, 2.2vw, 32px); font-weight: 600; line-height: 1.25; color: var(--color-navy); }
 .meta { margin: 0; font-size: 20px; line-height: 1.2; color: var(--color-purple); }
 .name + .meta { margin-top: 4px; }
@@ -40,3 +41,7 @@
 .description a {
   overflow-wrap: anywhere;
 }
+
+.actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.delete { padding: 0; border: none; background: none; font: inherit; font-size: 18px; font-weight: 600; color: var(--color-error); cursor: pointer; }
+.delete:hover, .delete:focus-visible { text-decoration: underline; }
