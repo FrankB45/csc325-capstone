@@ -3,6 +3,11 @@ import { Link } from "react-router-dom";
 import DetailsButton from "../DetailsButton/DetailsButton.jsx";
 import LoadingDots from "../LoadingDots/LoadingDots.jsx";
 import { formatDate } from "../../utils/format.js";
+import {
+  describeUpdateProgress,
+  isCandidateAttempt,
+  isUpdateInProgress,
+} from "../../utils/updateAttempt.js";
 import styles from "./ProjectCard.module.css";
 
 const ProjectThumbnail = ({ url }) => {
@@ -75,6 +80,16 @@ const ProjectCard = ({ project, onDelete }) => {
           {" · "}
           {project.progress.failed} failed
         </p>
+        {/* The values above describe the displayed analysis; a newer update is shown separately. */}
+        {isUpdateInProgress(project.update_attempt) && (
+          <p className={styles.meta}>
+            {describeUpdateProgress(project.update_attempt)} · showing previous results
+          </p>
+        )}
+        {isCandidateAttempt(project.job_id, project.update_attempt) &&
+          !isUpdateInProgress(project.update_attempt) && (
+            <p className={styles.meta}>Latest update did not replace these results.</p>
+          )}
       </div>
 
       <Link

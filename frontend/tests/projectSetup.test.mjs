@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { isValidUpdateReview, postJSON, prepareProjectSetup } from "../src/utils/projectSetup.js";
+import {
+  findNewUpdateAttempt,
+  isValidUpdateReview,
+  postJSON,
+  postJSONWithStatus,
+  prepareProjectSetup,
+  submitProjectUpdate,
+} from "../src/utils/projectSetup.js";
 
 const repositoryUrl = "https://github.com/example/saved-project";
 const firstSha = "a".repeat(40);
@@ -221,15 +228,19 @@ test("explicit update-review context must have valid source identities and choic
   const review = {
     sourceProjectId: "saved-project-id",
     sourceJobId: "saved-job-id",
+    sourceAttemptJobId: null,
     repositoryUrl,
     projectTitle: "Saved project",
     ...await prepareProjectSetup(repositoryUrl),
   };
   assert.equal(isValidUpdateReview(review), true);
+  assert.equal(isValidUpdateReview({ ...review, sourceAttemptJobId: "earlier-attempt-id" }), true);
   for (const invalid of [
     undefined, null, [], {},
     { ...review, sourceProjectId: "" },
     { ...review, sourceJobId: null },
+    { ...review, sourceAttemptJobId: undefined },
+    { ...review, sourceAttemptJobId: " " },
     { ...review, repositoryUrl: " " },
     { ...review, projectTitle: null },
     { ...review, pagePath: "missing.html" },
@@ -243,4 +254,213 @@ test("ordinary request errors retain field-validation details", async (t) => {
     JSON.stringify({ commit_shas: ["Select between 1 and 10 commits."] }), { status: 400 }
   ));
   await assert.rejects(postJSON("/api/analyses/", {}), /commit_shas: Select between 1 and 10 commits/);
+});
+
+// ---- Submitting an update ----
+
+function updateReview(overrides = {}) {
+  return {
+    sourceProjectId: "saved-project-id",
+    sourceJobId: "saved-job-id",
+    sourceAttemptJobId: null,
+    repositoryUrl,
+    projectTitle: "Saved project",
+    pages: ["index.html", "about.html"],
+    pagePath: "about.html",
+    commits: [
+      { sha: firstSha, id: firstSha, message: "First", date: "2026-11-17T10:00:00Z" },
+      { sha: secondSha, id: secondSha, message: "Second", date: "2026-11-17T11:00:00Z" },
+    ],
+    selectedIds: [secondSha],
+    ...overrides,
+  };
+}
+
+// Answers each request with the next response and records every call.
+function mockUpdateRequests(t, responses) {
+  const calls = [];
+  t.mock.method(globalThis, "fetch", async (path, options) => {
+    calls.push({ path, method: options?.method || "GET", body: options?.body ? JSON.parse(options.body) : null });
+    const response = responses[calls.length - 1];
+    assert.ok(response, "Unexpected request: " + path);
+    if (response === "network") throw new TypeError("Failed to fetch");
+    if (response === "unreadable") return new Response("<html>Bad gateway</html>", { status: 502 });
+    return new Response(JSON.stringify(response.body), { status: response.status });
+  });
+  return calls;
+}
+
+const acceptedReply = {
+  status: 202,
+  body: { job_id: "new-job-id", project_id: "saved-project-id", snapshot_id: "s", status: "queued", total_captures: 1 },
+};
+
+test("update submission sends the exact payload with paired source identities", async (t) => {
+  const calls = mockUpdateRequests(t, [acceptedReply]);
+  const result = await submitProjectUpdate(updateReview());
+
+  assert.deepEqual(result, { jobId: "new-job-id" });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].path, "/api/analyses/");
+  assert.equal(calls[0].method, "POST");
+  assert.deepEqual(calls[0].body, {
+    url: repositoryUrl,
+    name: "Saved project",
+    page_path: "about.html",
+    commit_shas: [secondSha],
+    project_id: "saved-project-id",
+    source_job_id: "saved-job-id",
+  });
+});
+
+test("an invalid review sends nothing and never falls back to ordinary creation", async (t) => {
+  const calls = mockUpdateRequests(t, []);
+  for (const review of [
+    updateReview({ sourceJobId: "" }),
+    updateReview({ sourceProjectId: null }),
+    updateReview({ pagePath: "missing.html" }),
+    updateReview({ selectedIds: [] }),
+    null,
+  ]) {
+    await assert.rejects(submitProjectUpdate(review), (error) => error.outcomeUnknown === false);
+  }
+  assert.equal(calls.length, 0);
+});
+
+test("clear refusals (400, 404, 409) are known not to have started an update", async (t) => {
+  for (const [status, body, message] of [
+    [400, { error: "Select between 1 and 10 commits." }, /Select between 1 and 10 commits/],
+    [400, { commit_shas: ["Not a valid commit."] }, /commit_shas: Not a valid commit/],
+    [404, { error: "Project not found." }, /Project not found/],
+    [409, { error: "The saved analysis has changed." }, /saved analysis has changed/],
+  ]) {
+    await t.test(String(status), async (t) => {
+      const calls = mockUpdateRequests(t, [{ status, body }]);
+      await assert.rejects(submitProjectUpdate(updateReview()), (error) => {
+        assert.equal(error.outcomeUnknown, false);
+        assert.match(error.message, message);
+        return true;
+      });
+      assert.equal(calls.length, 1, "A refused update must never be retried automatically.");
+    });
+  }
+});
+
+test("server errors, lost replies and unreadable replies leave the outcome unknown", async (t) => {
+  for (const [name, response] of [
+    ["500 with JSON", { status: 500, body: { error: "Server error." } }],
+    ["502 with JSON", { status: 502, body: { error: "GitHub could not complete the request." } }],
+    ["504 with JSON", { status: 504, body: { error: "Timed out." } }],
+    ["network failure", "network"],
+    ["unreadable body", "unreadable"],
+    ["non-object JSON", { status: 202, body: ["not", "an", "object"] }],
+  ]) {
+    await t.test(name, async (t) => {
+      const calls = mockUpdateRequests(t, [response]);
+      await assert.rejects(submitProjectUpdate(updateReview()), (error) => error.outcomeUnknown === true);
+      assert.equal(calls.length, 1, "An unknown outcome must never be retried automatically.");
+    });
+  }
+});
+
+test("an accepted reply for another project or without a job ID is not trusted", async (t) => {
+  for (const body of [
+    { job_id: "new-job-id", project_id: "another-project-id" },
+    { project_id: "saved-project-id" },
+    { job_id: "", project_id: "saved-project-id" },
+    { job_id: 7, project_id: "saved-project-id" },
+  ]) {
+    mockUpdateRequests(t, [{ status: 202, body }]);
+    await assert.rejects(submitProjectUpdate(updateReview()), (error) => error.outcomeUnknown === true);
+    t.mock.restoreAll();
+  }
+});
+
+test("only HTTP 202 confirms acceptance; other success statuses stay unknown", async (t) => {
+  // The same valid body is accepted with 202 but not with any other success status.
+  for (const status of [200, 201, 203, 207, 299]) {
+    await t.test("status " + status, async (t) => {
+      const calls = mockUpdateRequests(t, [{ status, body: acceptedReply.body }]);
+      await assert.rejects(
+        submitProjectUpdate(updateReview()),
+        (error) => error.outcomeUnknown === true && /could not be confirmed/.test(error.message)
+      );
+      assert.equal(calls.length, 1, "An unexpected success status must never be retried automatically.");
+    });
+  }
+
+  mockUpdateRequests(t, [acceptedReply]);
+  assert.deepEqual(await submitProjectUpdate(updateReview()), { jobId: "new-job-id" });
+});
+
+test("a 202 with a malformed body stays unknown", async (t) => {
+  for (const body of [
+    {},
+    { job_id: "new-job-id" },
+    { project_id: "saved-project-id" },
+    { job_id: "   ", project_id: "saved-project-id" },
+    { job_id: "new-job-id", project_id: "another-project-id" },
+  ]) {
+    mockUpdateRequests(t, [{ status: 202, body }]);
+    await assert.rejects(submitProjectUpdate(updateReview()), (error) => error.outcomeUnknown === true);
+    t.mock.restoreAll();
+  }
+});
+
+test("postJSON still returns only the parsed body, and postJSONWithStatus adds the status", async (t) => {
+  mockUpdateRequests(t, [{ status: 200, body: { value: 1 } }, { status: 202, body: { value: 2 } }]);
+  assert.deepEqual(await postJSON("/api/example/", {}), { value: 1 });
+  assert.deepEqual(await postJSONWithStatus("/api/example/", {}), { status: 202, data: { value: 2 } });
+});
+
+test("an aborted update request reports an abort, not a failure or success", async (t) => {
+  const calls = mockUpdateRequests(t, [acceptedReply]);
+  const controller = new AbortController();
+  controller.abort();
+  await assert.rejects(submitProjectUpdate(updateReview(), controller.signal), { name: "AbortError" });
+  assert.equal(calls.length, 0);
+});
+
+// ---- Checking for an update after an unclear reply ----
+
+test("checking finds a different attempt and reports its real status", async (t) => {
+  for (const status of ["queued", "processing", "complete", "partially_complete", "failed"]) {
+    await t.test(status, async (t) => {
+      const calls = mockUpdateRequests(t, [{ status: 200, body: { update_attempt: { job_id: "new-job-id", status } } }]);
+      const attempt = await findNewUpdateAttempt("saved-project-id", "earlier-attempt", undefined);
+      assert.equal(attempt.job_id, "new-job-id");
+      assert.equal(attempt.status, status);
+      assert.deepEqual(calls.map((call) => [call.method, call.path]), [["GET", "/api/projects/saved-project-id/"]]);
+    });
+  }
+});
+
+test("checking finds nothing when the attempt is missing or unchanged, which proves nothing", async (t) => {
+  mockUpdateRequests(t, [{ status: 200, body: { update_attempt: null } }]);
+  assert.equal(await findNewUpdateAttempt("p", null), null);
+  t.mock.restoreAll();
+  mockUpdateRequests(t, [{ status: 200, body: { update_attempt: { job_id: "same", status: "failed" } } }]);
+  assert.equal(await findNewUpdateAttempt("p", "same"), null);
+});
+
+test("a failed or malformed check is an error, not 'nothing started'", async (t) => {
+  for (const response of [
+    "network",
+    "unreadable",
+    { status: 500, body: { error: "oops" } },
+    { status: 200, body: {} },
+    { status: 200, body: { update_attempt: { status: "queued" } } },
+    { status: 200, body: [] },
+  ]) {
+    mockUpdateRequests(t, [response]);
+    await assert.rejects(findNewUpdateAttempt("p", null), /Could not check the project/);
+    t.mock.restoreAll();
+  }
+});
+
+test("an aborted check reports an abort", async (t) => {
+  mockUpdateRequests(t, [{ status: 200, body: { update_attempt: null } }]);
+  const controller = new AbortController();
+  controller.abort();
+  await assert.rejects(findNewUpdateAttempt("p", null, controller.signal), { name: "AbortError" });
 });

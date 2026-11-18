@@ -7,12 +7,29 @@ import Spinner from "../components/Spinner/Spinner.jsx";
 import CommitPicker from "../components/CommitPicker/CommitPicker.jsx";
 import { useRepositoryLookup } from "../hooks/useRepositoryLookup.js";
 import { MIN_COMMITS, MAX_COMMITS } from "../utils/commits.js";
-import { isValidUpdateReview, postJSON, prepareProjectSetup } from "../utils/projectSetup.js";
+import {
+  findNewUpdateAttempt,
+  isValidUpdateReview,
+  NO_NEW_UPDATE_MESSAGE,
+  postJSON,
+  prepareProjectSetup,
+  submitProjectUpdate,
+} from "../utils/projectSetup.js";
 import styles from "./NewProject.module.css";
 import watermark from "../assets/octocat-watermark.svg";
 
+const UNKNOWN_OUTCOME_MESSAGE =
+  "We couldn't confirm whether the update was started. Your current results are unchanged. " +
+  "Submitting again now could start a second update.";
+
 const NewProject = (props) => {
-  const { updateReview, onCancelReview } = props;
+  const {
+    updateReview,
+    onCancelReview,
+    onUpdateAccepted,
+    onUpdateUnconfirmed,
+    onReturnToProject,
+  } = props;
   // Even an invalid explicit review prop must never fall back to project creation.
   const isUpdateReview = "updateReview" in props || "onCancelReview" in props;
   const review = isValidUpdateReview(updateReview) ? updateReview : null;
@@ -35,6 +52,13 @@ const NewProject = (props) => {
   const [selectedIds, setSelectedIds] = useState(() => review ? [...review.selectedIds] : []);
   const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState("");
+  // Update review only: "reviewing" | "saving" | "unconfirmed" | "checking".
+  // "unconfirmed" means the update request may or may not have reached the server.
+  const [updateState, setUpdateState] = useState("reviewing");
+  const [hasSentUpdate, setHasSentUpdate] = useState(false);
+  const isSaving = updateState === "saving";
+  const isUnconfirmed = updateState === "unconfirmed" || updateState === "checking";
+  const isLocked = isSaving || isUnconfirmed;
 
   useEffect(() => () => requestRef.current?.abort(), []);
 
@@ -114,11 +138,82 @@ const NewProject = (props) => {
     }
   }
 
-  function handleReviewSubmit(event) {
+  // Save update is the confirmation. The request is sent once and never retried automatically.
+  async function handleReviewSubmit(event) {
     event.preventDefault();
+    if (updateState !== "reviewing" || requestRef.current || !canSubmit) return;
+
+    const controller = new AbortController();
+    requestRef.current = controller;
+    setError("");
+    setHasSentUpdate(true);
+    setUpdateState("saving");
+
+    try {
+      const result = await submitProjectUpdate(
+        { ...review, pagePath, selectedIds },
+        controller.signal
+      );
+      if (controller.signal.aborted || requestRef.current !== controller) return;
+
+      onUpdateAccepted(result.jobId);
+    } catch (err) {
+      if (controller.signal.aborted || requestRef.current !== controller) return;
+
+      if (err.outcomeUnknown === false) {
+        // The server clearly refused the update, so nothing was started.
+        setError(err.message || "The update could not be started.");
+        setUpdateState("reviewing");
+      } else {
+        setError(UNKNOWN_OUTCOME_MESSAGE);
+        setUpdateState("unconfirmed");
+        onUpdateUnconfirmed();
+      }
+    } finally {
+      if (requestRef.current === controller) requestRef.current = null;
+    }
   }
 
-  if (isUpdateReview && (!review || typeof onCancelReview !== "function")) {
+  // Reads the project once. A new update attempt means the earlier request did arrive.
+  async function handleCheckAgain() {
+    if (updateState !== "unconfirmed" || requestRef.current) return;
+
+    const controller = new AbortController();
+    requestRef.current = controller;
+    setUpdateState("checking");
+
+    try {
+      const attempt = await findNewUpdateAttempt(
+        review.sourceProjectId,
+        review.sourceAttemptJobId,
+        controller.signal
+      );
+      if (controller.signal.aborted || requestRef.current !== controller) return;
+
+      if (attempt) {
+        onUpdateAccepted(attempt.job_id);
+      } else {
+        setError(NO_NEW_UPDATE_MESSAGE);
+        setUpdateState("unconfirmed");
+      }
+    } catch (err) {
+      if (controller.signal.aborted || requestRef.current !== controller) return;
+
+      setError(err.message || "Could not check the project. Please try again.");
+      setUpdateState("unconfirmed");
+    } finally {
+      if (requestRef.current === controller) requestRef.current = null;
+    }
+  }
+
+  const hasReviewCallbacks = [
+    onCancelReview,
+    onUpdateAccepted,
+    onUpdateUnconfirmed,
+    onReturnToProject,
+  ].every((callback) => typeof callback === "function");
+
+  if (isUpdateReview && (!review || !hasReviewCallbacks)) {
     return (
       <PageLayout width="narrow" watermark>
         <h1 className={styles.title}>Review update</h1>
@@ -218,6 +313,7 @@ const NewProject = (props) => {
               className={styles.input}
               value={pagePath}
               onChange={(event) => setPagePath(event.target.value)}
+              disabled={isLocked}
               required
             >
               {pages.map((path) => (
@@ -229,15 +325,23 @@ const NewProject = (props) => {
           </div>
 
           {isUpdateReview ? (
-            <p id={reviewNoticeId} role="status">
-              Review only. Saving updates is not available yet. Cancel returns to your saved project.
+            <p id={reviewNoticeId}>
+              Saving starts a new analysis of the selected commits. Your current results stay visible until it succeeds.
             </p>
           ) : <p>Screenshots will appear after you create the project.</p>}
 
+          {isSaving && (
+            <p role="status">
+              Starting update… Leaving this page stops waiting for the reply, but it does not
+              cancel an update the server has already accepted.
+            </p>
+          )}
+
+          {/* While saving or unconfirmed the selection is locked, so it matches what was sent. */}
           <CommitPicker
             commits={commits}
             selectedIds={selectedIds}
-            onChange={setSelectedIds}
+            onChange={(ids) => { if (!isLocked) setSelectedIds(ids); }}
           />
 
           {displayedError && (
@@ -249,10 +353,32 @@ const NewProject = (props) => {
           <div className={styles.actions}>
             {isUpdateReview ? (
               <>
-                <NextButton type="button" disabled aria-describedby={reviewNoticeId}>
-                  Save update
-                </NextButton>
-                <CancelButton onClick={onCancelReview} />
+                {isUnconfirmed ? (
+                  <NextButton
+                    type="button"
+                    loading={updateState === "checking"}
+                    loadingLabel="Checking for the update"
+                    onClick={handleCheckAgain}
+                  >
+                    Check again
+                  </NextButton>
+                ) : (
+                  <NextButton
+                    loading={isSaving}
+                    loadingLabel="Saving update"
+                    disabled={!canSubmit}
+                    aria-describedby={reviewNoticeId}
+                  >
+                    Save update
+                  </NextButton>
+                )}
+                {/* After a request was sent, leaving also reloads the project's current state. */}
+                <CancelButton
+                  disabled={isSaving}
+                  onClick={hasSentUpdate ? onReturnToProject : onCancelReview}
+                >
+                  {isUnconfirmed ? "Back to project" : "Cancel"}
+                </CancelButton>
               </>
             ) : (
               <>

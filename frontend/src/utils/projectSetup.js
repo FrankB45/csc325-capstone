@@ -24,7 +24,8 @@ function getCompatibilityExplanation(report) {
   return "Compatibility could not be confirmed. Please try again.";
 }
 
-export async function postJSON(path, body, signal) {
+// Sends a JSON POST and returns { status, data }. Use postJSON when only the data matters.
+export async function postJSONWithStatus(path, body, signal) {
   if (signal?.aborted) throw new DOMException("Request canceled.", "AbortError");
 
   let response;
@@ -58,7 +59,7 @@ export async function postJSON(path, body, signal) {
   if (!response.ok) {
     // HTTP 502 can contain a useful compatibility report, not just a generic error.
     if (data.overall_status === "unavailable") {
-      throw new Error(getCompatibilityExplanation(data));
+      throw requestError(getCompatibilityExplanation(data), response.status);
     }
 
     const message = data.error || data.detail || data.reason;
@@ -68,14 +69,28 @@ export async function postJSON(path, body, signal) {
       )
       .join(" ");
 
-    throw new Error(
+    throw requestError(
       (Array.isArray(message) ? message.join(" ") : message) ||
       fields ||
-      "The request failed. Please try again."
+      "The request failed. Please try again.",
+      response.status
     );
   }
 
+  return { status: response.status, data };
+}
+
+export async function postJSON(path, body, signal) {
+  const { data } = await postJSONWithStatus(path, body, signal);
   return data;
+}
+
+// An error for a readable HTTP error response. Network failures and unreadable
+// responses have no httpStatus, which is how callers know the server's answer is unknown.
+function requestError(message, httpStatus) {
+  const error = new Error(message);
+  error.httpStatus = httpStatus;
+  return error;
 }
 
 function hasValidChoices(pages, commits, selectedIds) {
@@ -159,10 +174,106 @@ export function isValidUpdateReview(review) {
   for (const field of ["sourceProjectId", "sourceJobId", "repositoryUrl", "projectTitle"]) {
     if (typeof review[field] !== "string" || !review[field].trim()) return false;
   }
+  // The newest update attempt known when review opened: null means there was none yet.
+  const attemptId = review.sourceAttemptJobId;
+  if (attemptId !== null && (typeof attemptId !== "string" || !attemptId.trim())) return false;
   if (!hasValidChoices(review.pages, review.commits, review.selectedIds)) return false;
   if (!review.pages.includes(review.pagePath)) return false;
   for (const commit of review.commits) {
     if (commit.id !== commit.sha) return false;
   }
   return true;
+}
+
+// Only these statuses come from checks that run before any job is saved, so a
+// readable JSON reply with one of them means no update was started.
+const NOT_STARTED_STATUSES = [400, 404, 409];
+
+function notStartedError(message) {
+  const error = new Error(message);
+  error.outcomeUnknown = false;
+  return error;
+}
+
+function unknownOutcomeError(message) {
+  const error = new Error(message);
+  error.outcomeUnknown = true;
+  return error;
+}
+
+// Sends one update request. Never retries. Returns { jobId } for an accepted update.
+// A thrown error has outcomeUnknown = false only when the server clearly refused the
+// update. Anything else (lost reply, timeout, unreadable or unexpected reply) is unknown.
+export async function submitProjectUpdate(review, signal) {
+  if (!isValidUpdateReview(review)) {
+    throw notStartedError("Update review could not be opened. Return to the project and check again.");
+  }
+
+  let reply;
+  try {
+    reply = await postJSONWithStatus(
+      "/api/analyses/",
+      {
+        url: review.repositoryUrl,
+        name: review.projectTitle,
+        page_path: review.pagePath,
+        commit_shas: review.selectedIds,
+        project_id: review.sourceProjectId,
+        source_job_id: review.sourceJobId,
+      },
+      signal
+    );
+  } catch (error) {
+    if (error.name === "AbortError") throw error;
+    error.outcomeUnknown = !NOT_STARTED_STATUSES.includes(error.httpStatus);
+    throw error;
+  }
+
+  // The server accepts an update with HTTP 202 only. Any other success status, or a 202
+  // for a different project or without a job ID, cannot be trusted.
+  const result = reply.data;
+  if (
+    reply.status !== 202 ||
+    typeof result.job_id !== "string" ||
+    !result.job_id.trim() ||
+    result.project_id !== review.sourceProjectId
+  ) {
+    throw unknownOutcomeError("The server's reply could not be confirmed.");
+  }
+
+  return { jobId: result.job_id };
+}
+
+export const NO_NEW_UPDATE_MESSAGE =
+  "No new update is visible yet. The earlier request may still be reaching the server, " +
+  "so this does not mean it failed. Check again shortly or go back to the project.";
+
+// Reads the project once and returns its newest update attempt if it is different
+// from the one known before submitting. Returns null when no new attempt is visible.
+// "Not visible" never proves that the earlier request failed.
+export async function findNewUpdateAttempt(projectId, knownAttemptJobId, signal) {
+  const failureMessage = "Could not check the project. Please try again.";
+  let data;
+
+  try {
+    const response = await fetch("/api/projects/" + encodeURIComponent(projectId) + "/", { signal });
+    data = await response.json();
+    if (!response.ok) throw new Error(failureMessage);
+  } catch (error) {
+    if (signal?.aborted || error.name === "AbortError") {
+      throw new DOMException("Request canceled.", "AbortError");
+    }
+    throw new Error(failureMessage, { cause: error });
+  }
+
+  if (signal?.aborted) throw new DOMException("Request canceled.", "AbortError");
+  if (!isObject(data) || !("update_attempt" in data)) throw new Error(failureMessage);
+
+  const attempt = data.update_attempt;
+  if (attempt === null) return null;
+  if (!isObject(attempt) || typeof attempt.job_id !== "string" || !attempt.job_id) {
+    throw new Error(failureMessage);
+  }
+
+  return attempt.job_id === knownAttemptJobId ? null : attempt;
 }

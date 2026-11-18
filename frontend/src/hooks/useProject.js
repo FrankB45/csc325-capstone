@@ -1,8 +1,13 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { isUpdateInProgress } from "../utils/updateAttempt.js";
 
 export function useProject(projectId) {
   const [project, setProject] = useState(null);
   const [error, setError] = useState("");
+  // Changing this number makes the effect below load the project again right away.
+  const [refreshCount, setRefreshCount] = useState(0);
+
+  const refresh = useCallback(() => setRefreshCount((count) => count + 1), []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -27,7 +32,10 @@ export function useProject(projectId) {
         setProject(data);
         setError("");
 
-        if (["queued", "processing"].includes(data.analysis?.status)) {
+        // Keep polling while the displayed analysis or a newer update attempt is
+        // still being processed. The displayed analysis may already be complete.
+        const analysisRunning = ["queued", "processing"].includes(data.analysis?.status);
+        if (analysisRunning || isUpdateInProgress(data.update_attempt)) {
           timer = setTimeout(loadProject, 2000);
         }
       } catch (err) {
@@ -43,11 +51,12 @@ export function useProject(projectId) {
       controller.abort();
       clearTimeout(timer);
     };
-  }, [projectId]);
+  }, [projectId, refreshCount]);
 
   return {
     project,
     error,
     isLoading: project === null && error === "",
+    refresh,
   };
 }
