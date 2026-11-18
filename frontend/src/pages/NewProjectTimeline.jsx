@@ -10,7 +10,20 @@ import EmptyCommitSlot from "../components/EmptyCommitSlot/EmptyCommitSlot.jsx";
 import Timeline from "../components/Timeline/Timeline.jsx";
 import CommitOverlay from "../components/CommitOverlay/CommitOverlay.jsx";
 import Modal from "../components/Modal/Modal.jsx";
+import SyncButton from "../components/SyncButton/SyncButton.jsx";
 import AIAssistant from "../components/AIAssistant/AIAssistant.jsx";
+import NewProject from "./NewProject.jsx";
+import {
+  findNewUpdateAttempt,
+  NO_NEW_UPDATE_MESSAGE,
+  prepareProjectSetup,
+} from "../utils/projectSetup.js";
+import {
+  describeUnfinishedUpdate,
+  describeUpdateProgress,
+  isCandidateAttempt,
+  isUpdateInProgress,
+} from "../utils/updateAttempt.js";
 import styles from "./ProjectTimeline.module.css";
 
 const FULL_SCREENSHOT_VIEW_WIDTH = 1100;
@@ -326,7 +339,18 @@ const projectPageWithFullScreenshots = async (commits) => {
   return captureProjectPage(commits);
 };
 
-const ProjectTimelineView = ({ project, commits }) => {
+const ProjectTimelineView = ({
+  project,
+  commits,
+  updateAttempt,
+  watchedJobId,
+  unresolvedUpdate,
+  loadError,
+  onRetryLoad,
+  onUpdateAccepted,
+  onUpdateUnconfirmed,
+  onRefresh,
+}) => {
   const analysis = project.analysis;
   const availablePages = analysis?.available_pages ?? [analysis?.page_path].filter(Boolean);
   const [selectedPage, setSelectedPage] = useState(
@@ -344,7 +368,37 @@ const ProjectTimelineView = ({ project, commits }) => {
   const [overlayCommit, setOverlayCommit] = useState(null);
   const [downloadError, setDownloadError] = useState("");
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncError, setSyncError] = useState("");
+  const [updateReview, setUpdateReview] = useState(null);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [updateCheckMessage, setUpdateCheckMessage] = useState("");
+  const syncRequestRef = useRef(null);
+  const updateCheckRef = useRef(null);
   const modeRowRef = useRef(null);
+
+  // Leaving the page stops waiting for replies. It never cancels an update the server accepted.
+  useEffect(() => () => {
+    syncRequestRef.current?.abort();
+    syncRequestRef.current = null;
+    updateCheckRef.current?.abort();
+    updateCheckRef.current = null;
+  }, []);
+
+  // Sync Updates is paused while any analysis or update is processing, or while an
+  // update request is unconfirmed. The backend's busy check is still the real guard.
+  const analysisRunning = ["queued", "processing"].includes(analysis.status);
+  const candidateRunning = isUpdateInProgress(updateAttempt);
+  const isUpdateUnresolved = unresolvedUpdate !== null;
+  // After a failed refresh the page may be out of date (an accepted update could be missing),
+  // so Sync stays paused until the project loads again.
+  const isStatusStale = Boolean(loadError);
+  const syncBlocked = analysisRunning || candidateRunning || isUpdateUnresolved || isStatusStale;
+  const unfinishedUpdate =
+    isCandidateAttempt(analysis.job_id, updateAttempt) && !candidateRunning
+      ? describeUnfinishedUpdate(updateAttempt)
+      : null;
+  const showUpdated = watchedJobId !== null && analysis.job_id === watchedJobId;
 
   useEffect(() => {
     if (availablePages.length > 0 && !availablePages.includes(selectedPage)) {
@@ -400,6 +454,90 @@ const ProjectTimelineView = ({ project, commits }) => {
 
   const closeDownloadDialog = useCallback(() => setDownloadDialogOpen(false), []);
 
+  async function handleSync() {
+    if (syncRequestRef.current || syncBlocked) return;
+
+    const controller = new AbortController();
+    syncRequestRef.current = controller;
+    setIsSyncing(true);
+    setSyncError("");
+
+    try {
+      const setup = await prepareProjectSetup(project.repository_url, controller.signal);
+      if (controller.signal.aborted || syncRequestRef.current !== controller) return;
+
+      setUpdateReview({
+        sourceProjectId: project.id,
+        sourceJobId: analysis.job_id,
+        // Lets the review page recognize an update that appears after an unclear reply.
+        sourceAttemptJobId: updateAttempt?.job_id ?? null,
+        repositoryUrl: project.repository_url,
+        projectTitle: project.name,
+        ...setup,
+      });
+    } catch (error) {
+      if (!controller.signal.aborted && syncRequestRef.current === controller) {
+        setSyncError(error.message || "Could not prepare update review. Please try again.");
+      }
+    } finally {
+      if (syncRequestRef.current === controller) {
+        syncRequestRef.current = null;
+        if (!controller.signal.aborted) setIsSyncing(false);
+      }
+    }
+  }
+
+  function cancelUpdateReview() {
+    setUpdateReview(null);
+  }
+
+  // The review page accepted or found an update: close it and let the page reload the project.
+  function handleReviewAccepted(jobId) {
+    setUpdateReview(null);
+    onUpdateAccepted(jobId);
+  }
+
+  function handleReviewUnconfirmed() {
+    onUpdateUnconfirmed(updateReview.sourceAttemptJobId);
+  }
+
+  // Used after an update request was sent: close the review and reload the current state.
+  function returnToProject() {
+    setUpdateReview(null);
+    onRefresh();
+  }
+
+  // Reads the project once. Finding nothing never proves the earlier request failed.
+  async function handleCheckUpdate() {
+    if (updateCheckRef.current || !unresolvedUpdate) return;
+
+    const controller = new AbortController();
+    updateCheckRef.current = controller;
+    setIsCheckingUpdate(true);
+    setUpdateCheckMessage("");
+
+    try {
+      const attempt = await findNewUpdateAttempt(
+        project.id,
+        unresolvedUpdate.knownAttemptJobId,
+        controller.signal
+      );
+      if (controller.signal.aborted || updateCheckRef.current !== controller) return;
+
+      if (attempt) onUpdateAccepted(attempt.job_id);
+      else setUpdateCheckMessage(NO_NEW_UPDATE_MESSAGE);
+    } catch (error) {
+      if (!controller.signal.aborted && updateCheckRef.current === controller) {
+        setUpdateCheckMessage(error.message || "Could not check the project. Please try again.");
+      }
+    } finally {
+      if (updateCheckRef.current === controller) {
+        updateCheckRef.current = null;
+        if (!controller.signal.aborted) setIsCheckingUpdate(false);
+      }
+    }
+  }
+
   async function handleDownload(type, commitToExport) {
     setDownloadError("");
     try {
@@ -445,6 +583,18 @@ const ProjectTimelineView = ({ project, commits }) => {
 
   // TODO: call the backend AI endpoint.
   const handleAsk = async () => "The AI Assistant isn’t connected to the backend yet.";
+
+  if (updateReview) {
+    return (
+      <NewProject
+        updateReview={updateReview}
+        onCancelReview={cancelUpdateReview}
+        onUpdateAccepted={handleReviewAccepted}
+        onUpdateUnconfirmed={handleReviewUnconfirmed}
+        onReturnToProject={returnToProject}
+      />
+    );
+  }
 
   return (
     <PageLayout width="timeline" watermark="center">
@@ -496,7 +646,62 @@ const ProjectTimelineView = ({ project, commits }) => {
               />
             </div>
           </div>
+          <div className={styles.sync}>
+            <SyncButton
+              syncing={isSyncing || analysisRunning || candidateRunning}
+              paused={isUpdateUnresolved || isStatusStale}
+              onClick={handleSync}
+            />
+          </div>
         </div>
+
+        {isSyncing && <p role="status" data-export-ignore>Checking repository…</p>}
+        {syncError && <p role="alert" data-export-ignore>{syncError}</p>}
+
+        {/* A failed refresh keeps the loaded project on screen; Retry loads it again (no new update is sent). */}
+        {loadError && (
+          <div role="alert" data-export-ignore>
+            <p>
+              {loadError} The project below may be out of date. Retry checks the project again;
+              it does not submit another update.
+            </p>
+            <button type="button" onClick={onRetryLoad}>Retry</button>
+          </div>
+        )}
+
+        {/* The update below is separate from the results on this page, which are still the displayed analysis. */}
+        {candidateRunning && (
+          <p role="status" data-export-ignore>
+            {describeUpdateProgress(updateAttempt)}. The results below stay available until it succeeds.
+          </p>
+        )}
+        {unfinishedUpdate && (
+          <div role="alert" data-export-ignore>
+            <p>{unfinishedUpdate.summary} Your previous results are still shown.</p>
+            {unfinishedUpdate.details.length > 0 && (
+              <ul>
+                {unfinishedUpdate.details.map((line) => <li key={line}>{line}</li>)}
+              </ul>
+            )}
+          </div>
+        )}
+        {showUpdated && (
+          <p role="status" data-export-ignore>
+            Project updated. The results below come from the new analysis.
+          </p>
+        )}
+        {unresolvedUpdate && (
+          <div role="alert" data-export-ignore>
+            <p>
+              We couldn&apos;t confirm your last update request, so Sync Updates is paused until a
+              new update appears.
+            </p>
+            {updateCheckMessage && <p>{updateCheckMessage}</p>}
+            <button type="button" onClick={handleCheckUpdate} disabled={isCheckingUpdate}>
+              {isCheckingUpdate ? "Checking…" : "Check again"}
+            </button>
+          </div>
+        )}
 
         <section
           className={styles.stage}
@@ -600,7 +805,11 @@ const ProjectTimelineView = ({ project, commits }) => {
 };
 
 const ProjectTimelineLoader = ({ projectId }) => {
-  const { project, error, isLoading } = useProject(projectId);
+  const { project, error, isLoading, refresh } = useProject(projectId);
+  const [watchedJobId, setWatchedJobId] = useState(null);
+  // Set when an update request got no clear answer. It lives only in this page session,
+  // so reloading or leaving the page loses it; the backend has no duplicate-request guard.
+  const [unconfirmedUpdate, setUnconfirmedUpdate] = useState(null);
 
   if (isLoading) {
     return (
@@ -610,7 +819,8 @@ const ProjectTimelineLoader = ({ projectId }) => {
     );
   }
 
-  if (error) {
+  // Only a failed first load replaces the page. Once a project has loaded, errors are shown in place.
+  if (error && project === null) {
     return (
       <PageLayout width="narrow">
         <p role="alert">{error}</p>
@@ -631,6 +841,23 @@ const ProjectTimelineLoader = ({ projectId }) => {
     );
   }
 
+  // An unconfirmed request counts as resolved once a different update attempt appears.
+  const newestAttemptId = project.update_attempt?.job_id ?? null;
+  const unresolvedUpdate =
+    unconfirmedUpdate && newestAttemptId === unconfirmedUpdate.knownAttemptJobId
+      ? unconfirmedUpdate
+      : null;
+
+  function handleUpdateAccepted(jobId) {
+    setWatchedJobId(jobId);
+    setUnconfirmedUpdate(null);
+    refresh();
+  }
+
+  function handleUpdateUnconfirmed(knownAttemptJobId) {
+    setUnconfirmedUpdate({ knownAttemptJobId });
+  }
+
   const commits = project.analysis.commits.map((commit) => ({
     ...commit,
     id: commit.sha,
@@ -639,9 +866,17 @@ const ProjectTimelineLoader = ({ projectId }) => {
 
   return (
     <ProjectTimelineView
-      key={project.analysis.job_id}
+      key={`${project.id}:${project.analysis.job_id}:${project.repository_url}`}
       project={project}
       commits={commits}
+      updateAttempt={project.update_attempt ?? null}
+      watchedJobId={watchedJobId}
+      unresolvedUpdate={unresolvedUpdate}
+      loadError={error}
+      onRetryLoad={refresh}
+      onUpdateAccepted={handleUpdateAccepted}
+      onUpdateUnconfirmed={handleUpdateUnconfirmed}
+      onRefresh={refresh}
     />
   );
 };
