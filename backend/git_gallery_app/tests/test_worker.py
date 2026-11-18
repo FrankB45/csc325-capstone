@@ -1,7 +1,7 @@
 from django.test import SimpleTestCase
 
-from .models import Capture, Job
-from .services.worker import final_status
+from ..models import Capture, Job
+from ..services.worker import final_status
 
 import json
 import subprocess
@@ -9,8 +9,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from .capture.spec import CaptureSpec
-from .services.worker import run_capture_in_child
+from ..capture.spec import CaptureSpec
+from ..services.worker import run_capture_in_child
 
 class CaptureProcessTests(SimpleTestCase):
     def test_timeout_removes_downloads_and_partial_image(self):

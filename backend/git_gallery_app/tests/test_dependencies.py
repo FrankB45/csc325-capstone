@@ -8,7 +8,7 @@ import requests
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from .services.dependencies import (
+from ..services.dependencies import (
     _read_snapshot_bytes,
     _read_snapshot_text,
     check_repository_dependencies,
