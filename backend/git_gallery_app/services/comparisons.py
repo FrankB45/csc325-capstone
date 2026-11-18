@@ -9,7 +9,7 @@ from django.utils import timezone
 from pydantic import BaseModel, ConfigDict
 
 from ..models import Capture, Comparison
-from .llm import ( ComparisonRequestError, request_image_comparison )
+from .llm import ( ComparisonRequestError, request_image_comparison, load_system_prompt )
 
 logger = logging.getLogger(__name__)
 
@@ -29,12 +29,13 @@ class ComparisonResult(BaseModel):
     changes: list[ComparisonChange]
     limitations: list[str]
 
-def compare_screenshots(before_path, after_path):
+def compare_screenshots(before_path, after_path, system_prompt):
     # Wrapper for LLM call 
     return request_image_comparison(
         before_path,
         after_path,
-        result_type=ComparisonResult,
+        system_prompt,
+        result_type=ComparisonResult,  
     )
 
 def _get_captures(job, before_position, after_position):
@@ -121,14 +122,14 @@ def process_comparison(comparison_id):
     claimed = Comparison.objects.filter(
         pk=comparison_id,
         status=Comparison.Status.QUEUED,
-        attempts=Comparison.attempts,
+        attempts=comparison.attempts,
     ).update(
         status=Comparison.Status.PROCESSING,
         attempts=attempt,
         started_at=timezone.now(),
         completed_at=None,
         model_name=settings.OPENAI_MODEL,
-        prompt_version=settings.SYSTEM_PROMPT_VERSION,
+        prompt_version="",
         result=None,
         result_source=None,
         error_code="",
@@ -149,8 +150,8 @@ def process_comparison(comparison_id):
     )
 
     outcome = {
-        "status": Comparison.status.FAILED,
-        "results": None, 
+        "status": Comparison.Status.FAILED,
+        "result": None, 
         "result_source": None,
         "error_code": "",
         "error_message": "",
@@ -166,9 +167,12 @@ def process_comparison(comparison_id):
             comparison.after_position,
         )
         # Here we actually perform the comparison by calling the LLM service
+        system_prompt, version = load_system_prompt() #load prompt here to capture any errors
+        outcome["prompt_version"] = version
         result = compare_screenshots(
             _screenshot_path(before),
             _screenshot_path(after),
+            system_prompt,
         )
 
         result_data = result.model_dump(mode="json")
@@ -192,7 +196,7 @@ def process_comparison(comparison_id):
     else:
         outcome.update(
             status=Comparison.Status.COMPLETE,
-            results=result_data,
+            result=result_data,
             result_source=Comparison.Source.LLM,
         )
 
