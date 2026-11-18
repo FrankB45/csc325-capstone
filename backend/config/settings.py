@@ -20,7 +20,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env", override=False)  # Load environment variables from .env file
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY","").strip()  # Load the LLM API key from environment variables
 OPENAI_MODEL = os.getenv("OPENAI_MODEL","").strip()  # Load the LLM model from environment variables
-
+SYSTEM_PROMPT_PATH = os.getenv(
+    "SYSTEM_PROMPT_PATH",
+    "git_gallery_app/prompts/system_prompt_v1.txt",
+).strip()
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/

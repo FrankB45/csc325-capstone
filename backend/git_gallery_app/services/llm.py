@@ -35,6 +35,34 @@ class ComparisonRequestError(Exception):
         super().__init__(message)
         self.code = code
 
+def load_system_prompt():
+    configured_path = settings.SYSTEM_PROMPT_PATH
+
+    if not configured_path:
+        raise ComparisonRequestError(
+            "prompt_missing",
+            "No system prompt file is configured.",
+        )
+
+    path = Path(configured_path).expanduser()
+    if not path.is_absolute():
+        path = settings.BASE_DIR / path
+
+    try:
+        prompt = path.read_text(encoding="utf-8").strip()
+    except (OSError, UnicodeError) as error:
+        raise ComparisonRequestError(
+            "prompt_unavailable",
+            "The configured system prompt could not be read.",
+        ) from error
+
+    if not prompt:
+        raise ComparisonRequestError(
+            "prompt_empty",
+            "The configured system prompt is empty.",
+        )
+
+    return prompt, path.stem
 
 def _png_data_url(path):
     try:
