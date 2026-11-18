@@ -47,6 +47,7 @@ const Timeline = ({ commits, selectedIds, slotById, activeSlot, comparisonMode, 
         <ol className={styles.list} aria-label="Commit timeline">
           {commits.map((commit) => {
             const selected = selectedIds.includes(commit.id);
+            const failed = commit.status === "failed";
             const slot = slotById[commit.id];
             return (
               <li key={commit.id} className={styles.item}>
@@ -55,8 +56,8 @@ const Timeline = ({ commits, selectedIds, slotById, activeSlot, comparisonMode, 
                   className={`${styles.hit} ${comparisonMode && !slot ? styles.hitNoHover : ""} ${comparisonMode && !slot && activeSlot ? styles.hitPickable : ""}`}
                   aria-pressed={selected}
                   aria-label={slot
-                    ? `Comparison ${slot}, ${slot === 1 ? "left" : "right"}: commit ${commit.sha.slice(0, 7)}. Click to choose this comparison, or select another commit while it is active.`
-                    : `Select commit ${commit.sha.slice(0, 7)}: ${commit.message}`}
+                    ? `Comparison ${slot}, ${slot === 1 ? "left" : "right"}: commit ${commit.sha.slice(0, 7)}${failed ? ", capture failed" : ""}. Click to choose this comparison, or select another commit while it is active.`
+                    : `Select commit ${commit.sha.slice(0, 7)}: ${commit.message}${failed ? ". Capture failed." : ""}`}
                   onClick={() => {
                     if (slot && !activeSlot) {
                       onAssignSlot(slot);
@@ -71,6 +72,7 @@ const Timeline = ({ commits, selectedIds, slotById, activeSlot, comparisonMode, 
                   <span className={styles.label}>
                     <time dateTime={commit.date}>{formatShortDate(commit.date)}</time>
                     <span>({commit.sha.slice(0, 7)})</span>
+                    {failed && <span className={styles.failedLabel}>Capture failed</span>}
                   </span>
                 </button>
               </li>
