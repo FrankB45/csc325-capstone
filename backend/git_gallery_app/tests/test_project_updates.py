@@ -18,9 +18,9 @@ from django.utils import timezone
 import requests
 from rest_framework.test import APITransactionTestCase
 
-from .models import Capture, Commit, Job, Project, RepositorySnapshot
-from .services import analyses
-from .services.jobs import create_job
+from ..models import Capture, Commit, Job, Project, RepositorySnapshot
+from ..services import analyses
+from ..services.jobs import create_job
 
 
 PNG = base64.b64decode(
