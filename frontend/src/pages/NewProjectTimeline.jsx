@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useProject } from "../hooks/useProject.js";
 import { Link, useParams } from "react-router-dom";
 import PageLayout from "../components/PageLayout/PageLayout.jsx";
@@ -329,9 +329,13 @@ const projectPageWithFullScreenshots = async (commits) => {
 const ProjectTimelineView = ({ project, commits }) => {
   const analysis = project.analysis;
   const availablePages = analysis?.available_pages ?? [analysis?.page_path].filter(Boolean);
-  const [selectedPage, setSelectedPage] = useState(
-    analysis?.page_path || analysis?.default_page || availablePages[0] || "",
-  );
+  const [requestedPage, setSelectedPage] = useState(
+  analysis?.page_path || analysis?.default_page || availablePages[0] || "",
+);
+const selectedPage =
+  availablePages.length > 0 && !availablePages.includes(requestedPage)
+    ? availablePages[0]
+    : requestedPage;
   const [mode, setMode] = useState("standard"); // "standard" | "compare"
   const [picks, setPicks] = useState(() => {
     const latestCaptured = commits.filter((commit) => commit.image).at(-1);
@@ -346,11 +350,6 @@ const ProjectTimelineView = ({ project, commits }) => {
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
   const modeRowRef = useRef(null);
 
-  useEffect(() => {
-    if (availablePages.length > 0 && !availablePages.includes(selectedPage)) {
-      setSelectedPage(availablePages[0]);
-    }
-  }, [availablePages, selectedPage]);
 
   // Compare slots stay fixed: 1 is left and 2 is right.
   const shownIds = mode === "standard" ? picks.filter(Boolean).slice(-1) : picks.filter(Boolean);
