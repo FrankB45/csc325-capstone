@@ -1,12 +1,13 @@
-"""Tests for repository-grounding and repeated-analysis evaluation."""
+"""Tests for pair-comparison evaluation and mock adapter behavior."""
 
 from __future__ import annotations
 
 import json
 import unittest
+from copy import deepcopy
 
 from llm_adapter import build_adapter
-from run_evaluation import load_golden_set
+from run_evaluation import load_golden_set, load_system_prompt
 from test_consistency import evaluate_consistency
 from test_hallucination import evaluate_hallucination
 
@@ -21,30 +22,12 @@ class EvaluationLogicTests(unittest.TestCase):
         cls.cases = load_golden_set()
         cls.by_id = {case["id"]: case for case in cls.cases}
 
-    def test_dataset_covers_required_repository_scenarios(self):
+    def test_dataset_has_at_least_fifteen_pair_comparison_cases(self):
         self.assertGreaterEqual(len(self.cases), 15)
-        expected = {
-            "summary-single-file",
-            "summary-multiple-files",
-            "summary-added-file",
-            "summary-deleted-file",
-            "summary-bug-fix",
-            "summary-docs-only",
-            "summary-vague-message",
-            "summary-misleading-message",
-            "summary-incomplete-diff",
-            "summary-empty-commit",
-            "group-similar-commits",
-            "group-unrelated-changes",
-            "group-similar-message-different-changes",
-            "group-different-message-similar-changes",
-            "group-single-commit-history",
-            "group-empty-history",
-            "recommend-representative-captures",
-            "visual-pair-difference",
-            "visual-pair-incomplete",
-        }
-        self.assertTrue(expected.issubset(self.by_id))
+        self.assertEqual({case["task"]["id"] for case in self.cases}, {"compare_commits"})
+
+    def test_prompt_is_loaded_from_app_prompts_folder(self):
+        self.assertTrue(load_system_prompt().strip())
 
     def test_mock_expected_outputs_pass_grounding(self):
         adapter = build_adapter("mock")
@@ -53,93 +36,83 @@ class EvaluationLogicTests(unittest.TestCase):
                 response = adapter.generate_response(case, "")
                 self.assertEqual(evaluate_hallucination(case, response), [])
 
-    def test_incorrect_commit_summary_fails(self):
-        case = self.by_id["summary-single-file"]
-        response = dict(case["expected_output"])
-        response["summary"] = "The navigation color changes to red."
+    def test_wrong_commit_pair_fails(self):
+        case = self.by_id["compare-header-color"]
+        response = deepcopy(case["expected_output"])
+        response["after_commit_sha"] = "ffffffff"
         failures = evaluate_hallucination(case, encode(response))
-        self.assertTrue(failures)
+        self.assertTrue(any("selected after commit" in failure for failure in failures))
+
+    def test_incorrect_visual_change_fails(self):
+        case = self.by_id["compare-header-color"]
+        response = deepcopy(case["expected_output"])
+        response["changes"] = [{
+            "element": "Header background",
+            "before": "Gray",
+            "after": "Red",
+            "evidence": "The header becomes red."
+        }]
+        self.assertTrue(evaluate_hallucination(case, encode(response)))
 
     def test_fabricated_commit_identifier_fails(self):
-        case = self.by_id["summary-single-file"]
-        response = dict(case["expected_output"])
-        response["commit_sha"] = "ffffffff"
+        case = self.by_id["compare-header-color"]
+        response = deepcopy(case["expected_output"])
+        response["changes"][0]["evidence"] += " Commit abcdef0 confirms it."
         failures = evaluate_hallucination(case, encode(response))
-        self.assertTrue(any("invented or unsupported commit identifier" in f for f in failures))
+        self.assertTrue(any("unsupported commit identifier" in failure for failure in failures))
 
-    def test_fabricated_changed_file_fails(self):
-        case = self.by_id["summary-single-file"]
-        response = dict(case["expected_output"])
-        response["files_changed"] = ["styles.css", "login.py"]
+    def test_empty_change_list_requires_limit_or_no_difference_reason(self):
+        case = self.by_id["compare-header-color"]
+        response = {
+            "before_commit_sha": "a110001",
+            "after_commit_sha": "a110002",
+            "changes": [],
+            "limitations": []
+        }
         failures = evaluate_hallucination(case, encode(response))
-        self.assertTrue(any("unsupported changed files" in f for f in failures))
+        self.assertTrue(any("empty change list" in failure for failure in failures))
 
-    def test_fabricated_author_and_timestamp_fail(self):
-        case = self.by_id["summary-single-file"]
-        response = dict(case["expected_output"])
-        response["summary"] += " Authored by Morgan on 2025-01-03T10:00:00Z."
-        failures = evaluate_hallucination(case, encode(response))
-        self.assertTrue(any("unsupported commit author" in f for f in failures))
-        self.assertTrue(any("unsupported timestamp" in f for f in failures))
+    def test_no_visible_changes_are_accepted_when_explained(self):
+        case = self.by_id["compare-identical-screenshots"]
+        response = case["expected_output"]
+        self.assertEqual(evaluate_hallucination(case, encode(response)), [])
 
-    def test_misleading_commit_message_does_not_override_diff(self):
-        case = self.by_id["summary-misleading-message"]
-        response = dict(case["expected_output"])
-        response["summary"] = "This fixes the security vulnerability."
-        failures = evaluate_hallucination(case, encode(response))
-        self.assertTrue(failures)
-
-    def test_missing_diff_requires_limitation_in_analysis(self):
-        case = self.by_id["summary-incomplete-diff"]
-        response = dict(case["expected_output"])
-        response["limitations"] = []
-        failures = evaluate_hallucination(case, encode(response))
-        self.assertTrue(any("required limitation" in f for f in failures))
-
-    def test_consistent_grouping_ignores_group_names_and_order(self):
-        case = self.by_id["group-unrelated-changes"]
+    def test_consistency_allows_change_order_variation(self):
+        case = self.by_id["compare-multiple-elements"]
         first = json.loads(encode(case["expected_output"]))
         second = json.loads(encode(case["expected_output"]))
         third = json.loads(encode(case["expected_output"]))
-        second["groups"][0]["title"] = "Footer color change"
-        second["groups"][1]["title"] = "Validate email"
-        third["groups"] = list(reversed(third["groups"]))
-        third["groups"][0]["title"] = "Form validation"
-        third["groups"][1]["title"] = "Footer appearance"
-        responses = [encode(first), encode(second), encode(third)]
-        self.assertEqual(evaluate_consistency(case, responses), [])
-
-    def test_inconsistent_commit_groupings_fail(self):
-        case = self.by_id["group-unrelated-changes"]
-        correct = json.loads(encode(case["expected_output"]))
-        incorrect = {
-            "groups": [{
-                "commit_shas": ["b220003", "b220004"],
-                "title": "Shared work",
-                "rationale": "Both changes belong together."
-            }],
-            "limitations": []
-        }
-        failures = evaluate_consistency(case, [encode(correct), encode(incorrect), encode(correct)])
-        self.assertTrue(failures)
-
-    def test_inconsistent_stated_limitations_fail(self):
-        case = self.by_id["summary-incomplete-diff"]
-        correct = dict(case["expected_output"])
-        incorrect = dict(case["expected_output"])
-        incorrect["limitations"] = []
-        failures = evaluate_consistency(
-            case, [encode(correct), encode(incorrect), encode(correct)]
+        second["changes"] = list(reversed(second["changes"]))
+        third["changes"][0]["element"] = "Card corners"
+        third["changes"][1]["element"] = "Product button text"
+        third["changes"] = list(reversed(third["changes"]))
+        third["changes"][0]["evidence"] = (
+            "The screenshot shows rounded corners on the product card."
         )
+        third["changes"][1]["evidence"] = (
+            "The button label changes from Buy to Buy now between screenshots."
+        )
+        self.assertEqual(
+            evaluate_consistency(case, [encode(first), encode(second), encode(third)]),
+            [],
+        )
+
+    def test_inconsistent_commit_comparisons_fail(self):
+        case = self.by_id["compare-header-color"]
+        correct = json.loads(encode(case["expected_output"]))
+        wrong = json.loads(encode(case["expected_output"]))
+        wrong["changes"][0]["after"] = "Red"
+        wrong["changes"][0]["evidence"] = "The header changes from gray to red."
+        failures = evaluate_consistency(case, [encode(correct), encode(wrong), encode(correct)])
         self.assertTrue(failures)
 
-    def test_consistently_wrong_response_does_not_pass_consistency(self):
-        case = self.by_id["summary-single-file"]
-        incorrect = dict(case["expected_output"])
-        incorrect["summary"] = "The navigation changes to red."
-        response = encode(incorrect)
-        failures = evaluate_consistency(case, [response, response, response])
-        self.assertTrue(failures)
+    def test_consistently_wrong_comparisons_do_not_pass_consistency(self):
+        case = self.by_id["compare-header-color"]
+        wrong = json.loads(encode(case["expected_output"]))
+        wrong["changes"][0]["after"] = "Red"
+        wrong["changes"][0]["evidence"] = "The header changes from gray to red."
+        response = encode(wrong)
+        self.assertTrue(evaluate_consistency(case, [response, response, response]))
 
     def test_real_mode_does_not_fall_back_to_mock(self):
         with self.assertRaisesRegex(RuntimeError, "will not be used as a fallback"):

@@ -11,7 +11,7 @@ from pathlib import Path
 from llm_adapter import build_adapter
 from test_consistency import evaluate_consistency_suite
 from test_hallucination import (
-    TASK_IDS,
+    TASK_ID,
     _shape_failures,
     evaluate_hallucination_suite,
 )
@@ -19,9 +19,11 @@ from test_hallucination import (
 
 HERE = Path(__file__).resolve().parent
 GOLDEN_SET_PATH = HERE / "golden_set.json"
-SYSTEM_PROMPT_PATH = HERE / "system_prompt.txt"
+SYSTEM_PROMPT_PATH = HERE.parent / "prompts" / "system_prompt.txt"
 HALLUCINATION_THRESHOLD = 0.90
 CONSISTENCY_THRESHOLD = 0.80
+
+
 def load_golden_set(path: Path = GOLDEN_SET_PATH) -> list[dict]:
     try:
         cases = json.loads(path.read_text(encoding="utf-8"))
@@ -32,7 +34,6 @@ def load_golden_set(path: Path = GOLDEN_SET_PATH) -> list[dict]:
         raise ValueError("Golden dataset must be a list with at least 15 cases.")
 
     ids = set()
-    task_ids = set()
     required_keys = {
         "id",
         "category",
@@ -52,14 +53,23 @@ def load_golden_set(path: Path = GOLDEN_SET_PATH) -> list[dict]:
         ids.add(case["id"])
         if (
             not isinstance(case["task"], dict)
-            or case["task"].get("id") not in TASK_IDS
+            or case["task"].get("id") != TASK_ID
             or not isinstance(case["task"].get("question"), str)
             or not case["task"]["question"].strip()
         ):
-            raise ValueError(f"Golden case {case['id']} needs a supported selected task.")
+            raise ValueError(f"Golden case {case['id']} must select the compare_commits task.")
         if not isinstance(case["repository_data"], dict):
             raise ValueError(f"Golden case {case['id']} needs repository_data.")
-        task_ids.add(case["task"]["id"])
+        before = case["repository_data"].get("before")
+        after = case["repository_data"].get("after")
+        if (
+            not isinstance(before, dict)
+            or not isinstance(after, dict)
+            or not isinstance(before.get("sha"), str)
+            or not isinstance(after.get("sha"), str)
+            or before["sha"] == after["sha"]
+        ):
+            raise ValueError(f"Golden case {case['id']} must contain two distinct commit records.")
         required_facts = case.get("required_facts", [])
         required_behaviors = case.get("required_behaviors", [])
         required_limitations = case.get("required_limitations", [])
@@ -69,7 +79,7 @@ def load_golden_set(path: Path = GOLDEN_SET_PATH) -> list[dict]:
             case["forbidden_claims"], list
         ):
             raise ValueError(f"Golden case {case['id']} must use lists for evaluation criteria.")
-        if not required_facts and not required_behaviors:
+        if not required_facts and not required_behaviors and not required_limitations:
             raise ValueError(
                 f"Golden case {case['id']} needs required facts or required behaviors."
             )
@@ -81,9 +91,6 @@ def load_golden_set(path: Path = GOLDEN_SET_PATH) -> list[dict]:
                 f"Golden case {case['id']} has invalid expected_output: "
                 + "; ".join(shape_errors)
             )
-    if task_ids != TASK_IDS:
-        missing = TASK_IDS - task_ids
-        raise ValueError(f"Golden dataset does not cover analysis tasks: {', '.join(sorted(missing))}")
     return cases
 
 

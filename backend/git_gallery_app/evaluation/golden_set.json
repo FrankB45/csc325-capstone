@@ -1,310 +1,247 @@
 [
   {
-    "id": "summary-single-file",
+    "id": "compare-header-color",
     "category": "normal",
-    "task": {"id": "commit_summary", "question": "What changed in this commit?"},
+    "task": {"id": "compare_commits", "question": "Compare the two selected commits based on their screenshots."},
     "repository_data": {
-      "commits": [
-        {"sha": "a110001", "message": "Increase header spacing", "timestamp": "2025-01-02T10:00:00Z", "author": "Alex", "changed_files": ["styles.css"], "diff": "nav a { margin-right: 8px; } changes to nav a { margin-right: 16px; }"}
-      ],
-      "target_commit_sha": "a110001"
+      "before": {"sha":"a110001","timestamp":"2025-01-02T10:00:00Z","message":"Set gray header","changed_files":["styles.css"],"diff":"Header background changes from #777 to #12345a.","screenshot_observation":"Header is gray."},
+      "after": {"sha":"a110002","timestamp":"2025-01-03T10:00:00Z","message":"Set navy header","changed_files":["styles.css"],"diff":"Header background changes from #777 to #12345a.","screenshot_observation":"Header is navy."}
     },
-    "expected_output": {"commit_sha": "a110001", "files_changed": ["styles.css"], "summary": "The navigation link right margin increases from 8px to 16px.", "major_changes": ["Navigation links have more horizontal spacing."], "limitations": []},
-    "required_facts": [
-      {"fact": "Identifies the correct commit.", "phrases": ["a110001"]},
-      {"fact": "Identifies the changed stylesheet.", "phrases": ["styles.css"]},
-      {"fact": "Describes the margin change from 8px to 16px.", "phrases": ["margin increases from 8px to 16px", "margin changes from 8px to 16px", "spacing increases from 8px to 16px"]}
-    ],
-    "forbidden_claims": [{"claim": "Claims that another file or unrelated feature changed.", "phrases": ["index.html", "login form", "database"]}]
+    "expected_output": {"before_commit_sha":"a110001","after_commit_sha":"a110002","changes":[{"element":"Header background","before":"Gray","after":"Navy","evidence":"The before screenshot shows a gray header and the after screenshot shows a navy header."}],"limitations":[]},
+    "required_facts":[{"fact":"The header changes from gray to navy.","phrases":["header changes from gray to navy","gray header before and navy header after","header is gray before and navy after","before screenshot shows a gray header and the after screenshot shows a navy header"]}],
+    "forbidden_claims":[{"claim":"Attributes an unsupported purpose to the color change.","phrases":["to improve conversion","to make the site faster","requested by the client"]}]
   },
   {
-    "id": "summary-multiple-files",
+    "id": "compare-multiple-elements",
     "category": "normal",
-    "task": {"id": "commit_summary", "question": "What changed in this commit?"},
+    "task": {"id":"compare_commits","question":"Compare the two selected commits based on their screenshots."},
     "repository_data": {
-      "commits": [
-        {"sha": "a110002", "message": "Restyle and label the primary button", "timestamp": "2025-01-03T10:00:00Z", "author": "Mina", "changed_files": ["index.html", "styles.css"], "diff": "index.html changes button text from Go to View gallery. styles.css changes its background from #444 to #1266cc."}
-      ],
-      "target_commit_sha": "a110002"
+      "before":{"sha":"a120001","timestamp":"2025-01-04T10:00:00Z","message":"Old product card","changed_files":["index.html","styles.css"],"diff":"Button label is Buy. Card has a square border.","screenshot_observation":"Product card has a Buy button and square corners."},
+      "after":{"sha":"a120002","timestamp":"2025-01-05T10:00:00Z","message":"Update card button and shape","changed_files":["index.html","styles.css"],"diff":"Button label is Buy now. Card border radius is 10px.","screenshot_observation":"Product card has a Buy now button and rounded corners."}
     },
-    "expected_output": {"commit_sha": "a110002", "files_changed": ["index.html", "styles.css"], "summary": "The primary button label changes to View gallery and its background becomes blue.", "major_changes": ["The button text changes from Go to View gallery.", "The button background changes from #444 to #1266cc."], "limitations": []},
-    "required_facts": [
-      {"fact": "Both changed files are identified.", "phrases": ["index.html", "styles.css"]},
-      {"fact": "The button text changes to View gallery.", "phrases": ["text changes from go to view gallery", "label changes to view gallery", "button label becomes view gallery"]},
-      {"fact": "The background changes from #444 to #1266cc.", "phrases": ["background changes from #444 to #1266cc", "background becomes #1266cc", "button background changes to blue"]}
-    ],
-    "forbidden_claims": [{"claim": "Claims a route or backend feature was added.", "phrases": ["new route", "server endpoint", "database connection"]}]
+    "expected_output":{"before_commit_sha":"a120001","after_commit_sha":"a120002","changes":[{"element":"Product button text","before":"Buy","after":"Buy now","evidence":"The screenshot observations show the button label changing from Buy to Buy now."},{"element":"Product card corners","before":"Square","after":"Rounded","evidence":"The after screenshot shows rounded card corners."}],"limitations":[]},
+    "required_facts":[{"fact":"Button label changes from Buy to Buy now.","phrases":["button label changes from buy to buy now","button label changing from buy to buy now","buy becomes buy now"]},{"fact":"Card corners change from square to rounded.","phrases":["square to rounded corners","card corners become rounded","rounded card corners"]}],
+    "forbidden_claims":[{"claim":"Claims checkout behavior changed.","phrases":["checkout flow changes","payment is processed","buy now submits an order"]}]
   },
   {
-    "id": "summary-added-file",
-    "category": "normal",
-    "task": {"id": "commit_summary", "question": "What changed in this commit?"},
-    "repository_data": {
-      "commits": [
-        {"sha": "a110003", "message": "Add an About page", "timestamp": "2025-01-04T10:00:00Z", "author": "Jo", "changed_files": ["about.html"], "diff": "Creates about.html containing an h1 with the text About our studio."}
-      ],
-      "target_commit_sha": "a110003"
+    "id":"compare-added-file",
+    "category":"normal",
+    "task":{"id":"compare_commits","question":"Compare the two selected commits based on their screenshots."},
+    "repository_data":{
+      "before":{"sha":"a130001","timestamp":"2025-01-06T10:00:00Z","message":"Before About page","changed_files":["index.html"],"diff":"No about page.","screenshot_observation":"Navigation has Home and Contact links."},
+      "after":{"sha":"a130002","timestamp":"2025-01-07T10:00:00Z","message":"Add About page","changed_files":["about.html","index.html"],"diff":"Adds about.html and an About link to navigation.","screenshot_observation":"Navigation has Home, About, and Contact links."}
     },
-    "expected_output": {"commit_sha": "a110003", "files_changed": ["about.html"], "summary": "The commit adds about.html with an About our studio heading.", "major_changes": ["A new About page is created."], "limitations": []},
-    "required_facts": [
-      {"fact": "The commit adds about.html.", "phrases": ["adds about.html", "creates about.html", "new about.html"]},
-      {"fact": "The page contains the About our studio heading.", "phrases": ["about our studio heading", "heading about our studio", "h1 says about our studio"]}
-    ],
-    "forbidden_claims": [{"claim": "Claims the new page includes content not present in the diff.", "phrases": ["contact form", "team biographies", "map"]}]
+    "expected_output":{"before_commit_sha":"a130001","after_commit_sha":"a130002","changes":[{"element":"Navigation links","before":"Home and Contact","after":"Home, About, and Contact","evidence":"The after screenshot includes an About link not present before."}],"limitations":[]},
+    "required_facts":[{"fact":"The About link is newly visible.","phrases":["about link is newly visible","navigation adds an about link","about link appears","after screenshot includes an about link not present before"]}],
+    "forbidden_claims":[{"claim":"Claims that the entire new page content is visible in the screenshot.","phrases":["about page shows team biographies","about page contains a contact form","full about page content is shown"]}]
   },
   {
-    "id": "summary-deleted-file",
-    "category": "normal",
-    "task": {"id": "commit_summary", "question": "What changed in this commit?"},
-    "repository_data": {
-      "commits": [
-        {"sha": "a110004", "message": "Remove unused legacy stylesheet", "timestamp": "2025-01-05T10:00:00Z", "author": "Lee", "changed_files": ["legacy.css"], "diff": "Deletes legacy.css. No other file changes are included."}
-      ],
-      "target_commit_sha": "a110004"
+    "id":"compare-deleted-file",
+    "category":"normal",
+    "task":{"id":"compare_commits","question":"Compare the two selected commits based on their screenshots."},
+    "repository_data":{
+      "before":{"sha":"a140001","timestamp":"2025-01-08T10:00:00Z","message":"Legacy banner present","changed_files":["legacy-banner.html"],"diff":"Legacy promotional banner is present." ,"screenshot_observation":"A promotional banner appears above the page title."},
+      "after":{"sha":"a140002","timestamp":"2025-01-09T10:00:00Z","message":"Remove legacy banner","changed_files":["legacy-banner.html"],"diff":"Deletes the banner markup.","screenshot_observation":"No promotional banner appears above the page title."}
     },
-    "expected_output": {"commit_sha": "a110004", "files_changed": ["legacy.css"], "summary": "The commit deletes legacy.css.", "major_changes": ["The unused legacy stylesheet is removed."], "limitations": []},
-    "required_facts": [
-      {"fact": "legacy.css is deleted.", "phrases": ["deletes legacy.css", "removes legacy.css", "legacy.css is deleted"]}
-    ],
-    "forbidden_claims": [{"claim": "Claims the stylesheet was replaced or another file was modified.", "phrases": ["replaces it with", "styles.css also changes", "new stylesheet is added"]}]
+    "expected_output":{"before_commit_sha":"a140001","after_commit_sha":"a140002","changes":[{"element":"Promotional banner","before":"Visible above the title","after":"Not visible","evidence":"The before screenshot has a banner above the title; the after screenshot does not."}],"limitations":[]},
+    "required_facts":[{"fact":"The promotional banner is present before and absent after.","phrases":["banner is present before and absent after","banner disappears","banner is no longer visible","before screenshot has a banner above the title and after screenshot does not"]}],
+    "forbidden_claims":[{"claim":"Claims that the whole page or title was removed.","phrases":["page was deleted","title was removed","entire site disappeared"]}]
   },
   {
-    "id": "summary-bug-fix",
-    "category": "normal",
-    "task": {"id": "commit_summary", "question": "What changed in this commit?"},
-    "repository_data": {
-      "commits": [
-        {"sha": "a110005", "message": "Avoid error when optional banner is absent", "timestamp": "2025-01-06T10:00:00Z", "author": "Sam", "changed_files": ["app.js"], "diff": "Before: document.querySelector('.banner').classList.add('visible'); After: const banner = document.querySelector('.banner'); if (banner) banner.classList.add('visible');"}
-      ],
-      "target_commit_sha": "a110005"
+    "id":"compare-bugfix-visible",
+    "category":"normal",
+    "task":{"id":"compare_commits","question":"Compare the two selected commits based on their screenshots."},
+    "repository_data":{
+      "before":{"sha":"a150001","timestamp":"2025-01-10T10:00:00Z","message":"Fix missing image","changed_files":["app.js"],"diff":"Adds a null check before setting image src.","screenshot_observation":"The product image area is blank."},
+      "after":{"sha":"a150002","timestamp":"2025-01-11T10:00:00Z","message":"Fix missing image","changed_files":["app.js"],"diff":"Adds a null check before setting image src.","screenshot_observation":"Product image is visible."}
     },
-    "expected_output": {"commit_sha": "a110005", "files_changed": ["app.js"], "summary": "The code checks whether the banner element exists before accessing its classList.", "major_changes": ["This avoids a null-element access when the optional banner is absent."], "limitations": ["The diff does not establish that all application bugs are fixed."]},
-    "required_facts": [
-      {"fact": "The code checks for the banner before using it.", "phrases": ["checks whether the banner exists", "checks whether the banner element exists", "checks if the banner element exists", "guards access to the banner"]},
-      {"fact": "The change guards against access when the optional element is absent.", "phrases": ["avoids a null-element access", "prevents access when the banner is absent", "guards against a missing banner"]}
-    ],
-    "required_limitations": [{"behavior": "The diff does not establish that all application bugs are fixed.", "phrases": ["does not establish that all application bugs are fixed", "does not prove the application is bug-free", "not all bugs are established as fixed"]}],
-    "forbidden_claims": [{"claim": "Claims all bugs are fixed or runtime correctness was verified.", "phrases": ["all bugs are fixed", "the application is now bug-free", "runtime tests confirm"]}]
+    "expected_output":{"before_commit_sha":"a150001","after_commit_sha":"a150002","changes":[{"element":"Product image area","before":"Blank","after":"Image visible","evidence":"The before screenshot has a blank image area and the after screenshot shows the product image."}],"limitations":["The screenshots show a visual difference but do not prove the underlying bug is fully fixed."]},
+    "required_facts":[{"fact":"Product image area changes from blank to visible.","phrases":["blank to visible","image area is blank before and visible after","product image appears"]}],
+    "required_limitations":[{"behavior":"Do not claim the bug is fully fixed based only on screenshots.","phrases":["do not prove the underlying bug is fully fixed","does not establish the bug is fully fixed","cannot confirm the bug is fixed"]}],
+    "forbidden_claims":[{"claim":"Claims that all related errors are fixed.","phrases":["all image errors are fixed","the bug is fully fixed","the feature now always works"]}]
   },
   {
-    "id": "summary-docs-only",
-    "category": "normal",
-    "task": {"id": "commit_summary", "question": "What changed in this commit?"},
-    "repository_data": {
-      "commits": [
-        {"sha": "a110006", "message": "Document local setup", "timestamp": "2025-01-07T10:00:00Z", "author": "Rae", "changed_files": ["README.md"], "diff": "Adds installation instructions for creating a virtual environment and running the local development server."}
-      ],
-      "target_commit_sha": "a110006"
+    "id":"compare-documentation-no-visual-change",
+    "category":"edge",
+    "task":{"id":"compare_commits","question":"Compare the two selected commits based on their screenshots."},
+    "repository_data":{
+      "before":{"sha":"a160001","timestamp":"2025-01-12T10:00:00Z","message":"Old README","changed_files":["README.md"],"diff":"Documentation text only.","screenshot_observation":"A white page with a black heading."},
+      "after":{"sha":"a160002","timestamp":"2025-01-13T10:00:00Z","message":"Document setup","changed_files":["README.md"],"diff":"Adds local setup instructions.","screenshot_observation":"A white page with the same black heading."}
     },
-    "expected_output": {"commit_sha": "a110006", "files_changed": ["README.md"], "summary": "README.md gains local installation and development-server instructions.", "major_changes": ["This is a documentation-only change."], "limitations": ["The diff does not show an application-code change."]},
-    "required_facts": [
-      {"fact": "README.md is the only changed file.", "phrases": ["readme.md"]},
-      {"fact": "The change adds local setup instructions.", "phrases": ["local setup instructions", "installation instructions", "development-server instructions"]},
-      {"fact": "No application code change is shown.", "phrases": ["documentation-only", "no application-code change", "does not change application code"]}
-    ],
-    "required_limitations": [{"behavior": "The diff does not show application-code changes.", "phrases": ["diff does not show an application-code change", "does not show application code changes", "no application-code change"]}],
-    "forbidden_claims": [{"claim": "Claims that a product feature or server implementation changed.", "phrases": ["adds a server feature", "implements authentication", "changes application behavior"]}]
+    "expected_output":{"before_commit_sha":"a160001","after_commit_sha":"a160002","changes":[],"limitations":["No visible difference is recorded in the supplied screenshot observations."]},
+    "required_facts":[{"fact":"No visible difference is supported.","phrases":["no visible difference","screenshots show the same appearance","no change is visible"]}],
+    "required_limitations":[{"behavior":"The comparison does not infer a visual change from documentation-only diffs.","phrases":["no visible difference is recorded","documentation-only diffs do not show visual change","screenshots show the same appearance"]}],
+    "forbidden_claims":[{"claim":"Claims the web page changed.","phrases":["page layout changed","heading color changed","new button appears"]}]
   },
   {
-    "id": "summary-vague-message",
-    "category": "edge",
-    "task": {"id": "commit_summary", "question": "What changed in this commit?"},
-    "repository_data": {
-      "commits": [
-        {"sha": "a110007", "message": "misc update", "timestamp": "2025-01-08T10:00:00Z", "author": "Dee", "changed_files": ["styles.css"], "diff": "Changes .card border-radius from 2px to 10px."}
-      ],
-      "target_commit_sha": "a110007"
+    "id":"compare-vague-message-clear-screenshots",
+    "category":"normal",
+    "task":{"id":"compare_commits","question":"Compare the two selected commits based on their screenshots."},
+    "repository_data":{
+      "before":{"sha":"a170001","timestamp":"2025-01-14T10:00:00Z","message":"misc update","changed_files":["styles.css"],"diff":"Card border radius 2px.","screenshot_observation":"Card corners are nearly square."},
+      "after":{"sha":"a170002","timestamp":"2025-01-15T10:00:00Z","message":"misc update","changed_files":["styles.css"],"diff":"Card border radius 10px.","screenshot_observation":"Card corners are visibly rounded."}
     },
-    "expected_output": {"commit_sha": "a110007", "files_changed": ["styles.css"], "summary": "The card corners become more rounded, with border-radius increasing from 2px to 10px.", "major_changes": ["The diff changes the card border radius."], "limitations": ["The vague commit message does not explain the reason for the change."]},
-    "required_facts": [
-      {"fact": "The diff changes the card radius from 2px to 10px.", "phrases": ["border-radius increasing from 2px to 10px", "border radius changes from 2px to 10px", "card radius changes from 2px to 10px"]},
-      {"fact": "The commit message does not establish intent.", "phrases": ["message does not explain the reason", "reason for the change is unknown", "commit message is vague"]}
-    ],
-    "required_limitations": [{"behavior": "The commit message does not establish the author's reason.", "phrases": ["commit message does not explain the reason", "reason for the change is unknown", "message is vague"]}],
-    "forbidden_claims": [{"claim": "Attributes a reason or purpose to the author.", "phrases": ["to improve conversion", "the designer wanted", "requested by the client"]}]
+    "expected_output":{"before_commit_sha":"a170001","after_commit_sha":"a170002","changes":[{"element":"Card corners","before":"Nearly square","after":"Rounded","evidence":"The screenshots show nearly square corners before and rounded corners after."}],"limitations":[]},
+    "required_facts":[{"fact":"Card corners change from nearly square to rounded.","phrases":["nearly square to rounded","corners become rounded","card corners are rounded after"]}],
+    "forbidden_claims":[{"claim":"Infers why the developer changed the corners.","phrases":["to improve conversions","designer wanted softer","requested by users"]}]
   },
   {
-    "id": "summary-misleading-message",
-    "category": "false-assumption",
-    "task": {"id": "commit_summary", "question": "What changed in this commit?"},
-    "repository_data": {
-      "commits": [
-        {"sha": "a110008", "message": "Fix login security vulnerability", "timestamp": "2025-01-09T10:00:00Z", "author": "Kai", "changed_files": ["index.html"], "diff": "Changes the login button label from Sign in to Continue. No authentication or security code changes."}
-      ],
-      "target_commit_sha": "a110008"
+    "id":"compare-misleading-message",
+    "category":"false-assumption",
+    "task":{"id":"compare_commits","question":"Compare the two selected commits based on their screenshots."},
+    "repository_data":{
+      "before":{"sha":"a180001","timestamp":"2025-01-16T10:00:00Z","message":"Add checkout security","changed_files":["index.html"],"diff":"Button label is Pay.","screenshot_observation":"Button text reads Pay."},
+      "after":{"sha":"a180002","timestamp":"2025-01-17T10:00:00Z","message":"Add checkout security","changed_files":["index.html"],"diff":"Button label changes to Continue.","screenshot_observation":"Button text reads Continue."}
     },
-    "expected_output": {"commit_sha": "a110008", "files_changed": ["index.html"], "summary": "Despite the commit message, the diff only changes the login button label from Sign in to Continue.", "major_changes": ["The button label changes."], "limitations": ["No security fix is shown in the supplied diff."]},
-    "required_facts": [
-      {"fact": "The label changes from Sign in to Continue.", "phrases": ["from sign in to continue", "label changes to continue", "button label is changed to continue"]},
-      {"fact": "No security fix is present in the diff.", "phrases": ["no security fix is shown", "diff does not contain a security fix", "no security code changes"]}
-    ],
-    "required_limitations": [{"behavior": "The supplied diff does not establish a security fix.", "phrases": ["no security fix is shown", "diff does not contain a security fix", "no security code changes"]}],
-    "forbidden_claims": [{"claim": "Says a security vulnerability was fixed.", "phrases": ["fixes the security vulnerability", "security vulnerability is fixed", "improves authentication security"]}]
+    "expected_output":{"before_commit_sha":"a180001","after_commit_sha":"a180002","changes":[{"element":"Button label","before":"Pay","after":"Continue","evidence":"The screenshots show Pay before and Continue after."}],"limitations":["The screenshots do not establish a security change."]},
+    "required_facts":[{"fact":"The visible button label changes from Pay to Continue.","phrases":["label changes from pay to continue","pay before and continue after","button text changes to continue"]}],
+    "required_limitations":[{"behavior":"No security change is established by the screenshots.","phrases":["screenshots do not establish a security change","security change is not visible","no security change is established"]}],
+    "forbidden_claims":[{"claim":"Claims checkout security was added or changed.","phrases":["checkout security was added","security is improved","payment is now secure"]}]
   },
   {
-    "id": "summary-incomplete-diff",
-    "category": "ambiguous",
-    "task": {"id": "commit_summary", "question": "What changed in this commit?"},
-    "repository_data": {
-      "commits": [
-        {"sha": "a110009", "message": "Update product page", "timestamp": "2025-01-10T10:00:00Z", "author": "Noa", "changed_files": ["product.html"], "diff": null, "diff_status": "unavailable"}
-      ],
-      "target_commit_sha": "a110009"
+    "id":"compare-missing-diff",
+    "category":"ambiguous",
+    "task":{"id":"compare_commits","question":"Compare the two selected commits based on their screenshots."},
+    "repository_data":{
+      "before":{"sha":"a190001","timestamp":"2025-01-18T10:00:00Z","message":"Before page update","changed_files":["index.html"],"diff":null,"screenshot_observation":"A blue button is below the title."},
+      "after":{"sha":"a190002","timestamp":"2025-01-19T10:00:00Z","message":"Update page","changed_files":["index.html"],"diff":null,"screenshot_observation":"A green button is below the title."}
     },
-    "expected_output": {"commit_sha": "a110009", "files_changed": ["product.html"], "summary": "The commit affects product.html, but the specific content changes cannot be determined because its diff is unavailable.", "major_changes": [], "limitations": ["The diff is unavailable, so the change details are unknown."]},
-    "required_facts": [
-      {"fact": "The commit affects product.html.", "phrases": ["product.html"]},
-      {"fact": "The unavailable diff prevents determining specific changes.", "phrases": ["diff is unavailable", "specific changes cannot be determined", "change details are unknown"]}
-    ],
-    "required_limitations": [
-      {"behavior": "The analysis records the missing diff as a limitation.", "phrases": ["diff is unavailable", "specific content changes cannot be determined", "change details are unknown"]}
-    ],
-    "forbidden_claims": [{"claim": "Invents a product-page change based on the commit message alone.", "phrases": ["adds a price table", "changes the product image", "adds product specifications"]}]
+    "expected_output":{"before_commit_sha":"a190001","after_commit_sha":"a190002","changes":[{"element":"Button color","before":"Blue","after":"Green","evidence":"The before and after screenshot observations report blue and green buttons."}],"limitations":["Commit diffs are unavailable, so the implementation and reason for the color change cannot be established."]},
+    "required_facts":[{"fact":"Button color changes from blue to green.","phrases":["button color changes from blue to green","blue button before and green after","button changes from blue to green"]}],
+    "required_limitations":[{"behavior":"The unavailable diffs limit conclusions about implementation or reason.","phrases":["diffs are unavailable","implementation and reason cannot be established","reason for the color change cannot be established"]}],
+    "forbidden_claims":[{"claim":"Invents implementation details or intent.","phrases":["CSS variable was changed","developer wanted green","improves accessibility"]}]
   },
   {
-    "id": "summary-empty-commit",
-    "category": "edge",
-    "task": {"id": "commit_summary", "question": "What changed in this commit?"},
-    "repository_data": {
-      "commits": [
-        {"sha": "a110010", "message": "Checkpoint", "timestamp": "2025-01-11T10:00:00Z", "author": "Pat", "changed_files": [], "diff": ""}
-      ],
-      "target_commit_sha": "a110010"
+    "id":"compare-identical-screenshots",
+    "category":"edge",
+    "task":{"id":"compare_commits","question":"Compare the two selected commits based on their screenshots."},
+    "repository_data":{
+      "before":{"sha":"a200001","timestamp":"2025-01-20T10:00:00Z","message":"Initial","changed_files":["index.html"],"diff":"Adds semantic markup.","screenshot_observation":"White background, centered black heading, blue button."},
+      "after":{"sha":"a200002","timestamp":"2025-01-21T10:00:00Z","message":"Improve accessibility","changed_files":["index.html"],"diff":"Adds aria-label to button.","screenshot_observation":"White background, centered black heading, blue button."}
     },
-    "expected_output": {"commit_sha": "a110010", "files_changed": [], "summary": "No file changes are recorded for this commit.", "major_changes": [], "limitations": ["The empty diff provides no code change to describe."]},
-    "required_facts": [
-      {"fact": "No files changed.", "phrases": ["no file changes", "no files changed", "empty diff"]},
-      {"fact": "There is no code change to describe.", "phrases": ["no code change to describe", "no changes to summarize", "empty diff provides no code change"]}
-    ],
-    "required_limitations": [{"behavior": "The empty diff is noted as limiting analysis.", "phrases": ["empty diff provides no code change", "empty diff limits analysis", "no code change to describe"]}],
-    "forbidden_claims": [{"claim": "Invents a file modification or feature.", "phrases": ["styles.css changed", "adds a feature", "fixes a bug"]}]
+    "expected_output":{"before_commit_sha":"a200001","after_commit_sha":"a200002","changes":[],"limitations":["The supplied screenshots show no visible differences; the markup change is not visually observable here."]},
+    "required_facts":[{"fact":"The supplied screenshots show no visible difference.","phrases":["no visible differences","screenshots appear identical","no visual change is shown"]}],
+    "required_limitations":[{"behavior":"Do not present the source-level accessibility change as visible.","phrases":["markup change is not visually observable","source change is not visible","accessibility attribute is not visually observable"]}],
+    "forbidden_claims":[{"claim":"Invents visual differences from the markup change.","phrases":["button is larger","heading moved","background changed color"]}]
   },
   {
-    "id": "group-similar-commits",
-    "category": "normal",
-    "task": {"id": "group_commits", "question": "Group consecutive commits by similarity into timeline milestones."},
-    "repository_data": {
-      "commits": [
-        {"sha": "b220001", "message": "Style primary button", "timestamp": "2025-02-01T10:00:00Z", "changed_files": ["styles.css"], "diff": "Changes primary button background from gray to blue."},
-        {"sha": "b220002", "message": "Adjust button hover state", "timestamp": "2025-02-02T10:00:00Z", "changed_files": ["styles.css"], "diff": "Changes primary button hover background from dark gray to dark blue."}
-      ]
+    "id":"compare-missing-before-screenshot",
+    "category":"edge",
+    "task":{"id":"compare_commits","question":"Compare the two selected commits based on their screenshots."},
+    "repository_data":{
+      "before":{"sha":"a210001","timestamp":"2025-01-22T10:00:00Z","message":"Old view","changed_files":["styles.css"],"diff":"Unknown.","screenshot_observation":null},
+      "after":{"sha":"a210002","timestamp":"2025-01-23T10:00:00Z","message":"New view","changed_files":["styles.css"],"diff":"Unknown.","screenshot_observation":"A green Save button is visible."}
     },
-    "expected_output": {"groups": [{"commit_shas": ["b220001", "b220002"], "title": "Primary button styling", "rationale": "Both consecutive commits adjust the primary button's visual colors."}], "limitations": []},
-    "expected_groups": [["b220001", "b220002"]],
-    "required_facts": [{"fact": "The two consecutive button-style changes are grouped together.", "phrases": ["primary button", "button styling", "button colors"]}],
-    "forbidden_claims": [{"claim": "Claims that the button behavior or route changed.", "phrases": ["button navigates to", "form submission behavior", "new route"]}]
+    "expected_output":{"before_commit_sha":"a210001","after_commit_sha":"a210002","changes":[],"limitations":["The before screenshot is unavailable, so a visual difference cannot be established."]},
+    "required_limitations":[{"behavior":"Acknowledges unavailable before screenshot.","phrases":["before screenshot is unavailable","no before screenshot to compare","cannot establish a visual difference"]}],
+    "forbidden_claims":[{"claim":"Infers what the prior screenshot showed.","phrases":["changed from blue to green","was previously red","became green"]}]
   },
   {
-    "id": "group-unrelated-changes",
-    "category": "edge",
-    "task": {"id": "group_commits", "question": "Group consecutive commits by similarity into timeline milestones."},
-    "repository_data": {
-      "commits": [
-        {"sha": "b220003", "message": "Update footer colors", "timestamp": "2025-02-03T10:00:00Z", "changed_files": ["styles.css"], "diff": "Changes footer text color from gray to white."},
-        {"sha": "b220004", "message": "Add email validation", "timestamp": "2025-02-04T10:00:00Z", "changed_files": ["form.js"], "diff": "Rejects a form submission when the email field is invalid."}
-      ]
+    "id":"compare-missing-after-screenshot",
+    "category":"ambiguous",
+    "task":{"id":"compare_commits","question":"Compare the two selected commits based on their screenshots."},
+    "repository_data":{
+      "before":{"sha":"a220001","timestamp":"2025-01-24T10:00:00Z","message":"Old view","changed_files":["styles.css"],"diff":"Unknown.","screenshot_observation":"The title is black."},
+      "after":{"sha":"a220002","timestamp":"2025-01-25T10:00:00Z","message":"New view","changed_files":["styles.css"],"diff":"Unknown.","screenshot_observation":null}
     },
-    "expected_output": {"groups": [{"commit_shas": ["b220003"], "title": "Footer styling", "rationale": "This commit changes footer text color."}, {"commit_shas": ["b220004"], "title": "Form validation", "rationale": "This commit adds email validation behavior."}], "limitations": []},
-    "expected_groups": [["b220003"], ["b220004"]],
-    "required_facts": [{"fact": "Footer styling and form validation are distinct changes.", "phrases": ["footer", "email validation", "form validation"]}],
-    "forbidden_claims": [{"claim": "Groups unrelated footer styling and form validation as one feature.", "phrases": ["both commits style the footer", "footer color and email validation are one change"]}]
+    "expected_output":{"before_commit_sha":"a220001","after_commit_sha":"a220002","changes":[],"limitations":["The after screenshot is unavailable, so a visual difference cannot be established."]},
+    "required_limitations":[{"behavior":"Acknowledges unavailable after screenshot.","phrases":["after screenshot is unavailable","no after screenshot to compare","cannot establish a visual difference"]}],
+    "forbidden_claims":[{"claim":"Invents the after state.","phrases":["title is now blue","title disappeared","after screenshot shows"]}]
   },
   {
-    "id": "group-similar-message-different-changes",
-    "category": "ambiguous",
-    "task": {"id": "group_commits", "question": "Group consecutive commits by similarity into timeline milestones."},
-    "repository_data": {
-      "commits": [
-        {"sha": "b220005", "message": "Update styles", "timestamp": "2025-02-05T10:00:00Z", "changed_files": ["styles.css"], "diff": "Changes footer text color from gray to white."},
-        {"sha": "b220006", "message": "Update styles", "timestamp": "2025-02-06T10:00:00Z", "changed_files": ["styles.css"], "diff": "Changes the product card border radius from 2px to 10px."}
-      ]
+    "id":"compare-empty-diff-no-visual-difference",
+    "category":"edge",
+    "task":{"id":"compare_commits","question":"Compare the two selected commits based on their screenshots."},
+    "repository_data":{
+      "before":{"sha":"a230001","timestamp":"2025-01-26T10:00:00Z","message":"Checkpoint","changed_files":[],"diff":"","screenshot_observation":"White background with one black heading."},
+      "after":{"sha":"a230002","timestamp":"2025-01-27T10:00:00Z","message":"Checkpoint","changed_files":[],"diff":"","screenshot_observation":"White background with one black heading."}
     },
-    "expected_output": {"groups": [{"commit_shas": ["b220005"], "title": "Footer text color", "rationale": "This commit changes footer text color."}, {"commit_shas": ["b220006"], "title": "Product card corners", "rationale": "This commit rounds product card corners."}], "limitations": []},
-    "expected_groups": [["b220005"], ["b220006"]],
-    "required_facts": [{"fact": "The commits have similar messages but change different elements.", "phrases": ["footer text color", "product card", "different changes"]}],
-    "forbidden_claims": [{"claim": "Groups the commits solely because their messages match.", "phrases": ["same message means same change", "both commits update the same feature"]}]
+    "expected_output":{"before_commit_sha":"a230001","after_commit_sha":"a230002","changes":[],"limitations":["Both commits have empty diffs and the screenshots show no visible differences."]},
+    "required_facts":[{"fact":"Both diffs are empty.","phrases":["both commits have empty diffs","empty diffs"]},{"fact":"No visible difference is observed.","phrases":["screenshots show no visible differences","no visible difference"]}],
+    "forbidden_claims":[{"claim":"Invents a change between identical screenshots.","phrases":["heading changed","new element appears","layout changed"]}]
   },
   {
-    "id": "group-different-message-similar-changes",
-    "category": "normal",
-    "task": {"id": "group_commits", "question": "Group consecutive commits by similarity into timeline milestones."},
-    "repository_data": {
-      "commits": [
-        {"sha": "b220007", "message": "Tidy card gutters", "timestamp": "2025-02-07T10:00:00Z", "changed_files": ["styles.css"], "diff": "Changes .card padding from 12px to 16px."},
-        {"sha": "b220008", "message": "Give tiles breathing room", "timestamp": "2025-02-08T10:00:00Z", "changed_files": ["styles.css"], "diff": "Changes .tile padding from 12px to 16px; .tile is the card component."}
-      ]
+    "id":"compare-two-elements-reversed-input-order",
+    "category":"normal",
+    "task":{"id":"compare_commits","question":"Compare the two selected commits based on their screenshots; use the timestamps to identify earlier and later versions."},
+    "repository_data":{
+      "before":{"sha":"a240002","timestamp":"2025-02-02T10:00:00Z","message":"Later state","changed_files":["styles.css"],"diff":"Header is navy.","screenshot_observation":"Header is navy; footer text is white."},
+      "after":{"sha":"a240001","timestamp":"2025-02-01T10:00:00Z","message":"Earlier state","changed_files":["styles.css"],"diff":"Header is gray.","screenshot_observation":"Header is gray; footer text is gray."}
     },
-    "expected_output": {"groups": [{"commit_shas": ["b220007", "b220008"], "title": "Card spacing refinement", "rationale": "Despite different messages, both consecutive diffs increase padding on card components."}], "limitations": []},
-    "expected_groups": [["b220007", "b220008"]],
-    "required_facts": [{"fact": "The diffs make the same kind of card-spacing adjustment.", "phrases": ["increase padding on card components", "both increase card padding", "card spacing refinement"]}],
-    "forbidden_claims": [{"claim": "Says the changes are unrelated because the messages differ.", "phrases": ["unrelated because their messages differ", "different messages prove different work"]}]
+    "expected_output":{"before_commit_sha":"a240002","after_commit_sha":"a240001","changes":[{"element":"Header background","before":"Navy","after":"Gray","evidence":"The selected before commit is later by timestamp; its header is navy, while the selected after commit's header is gray."},{"element":"Footer text","before":"White","after":"Gray","evidence":"The selected before commit shows white footer text, while the selected after commit shows gray footer text."}],"limitations":["The selected commit labels are preserved; timestamps indicate their chronological order."]},
+    "required_facts":[{"fact":"Reports header color states according to the provided selection labels.","phrases":["navy before and gray after","header is navy in the before and gray in the after"]},{"fact":"Reports footer color states according to the provided selection labels.","phrases":["white footer text before and gray after","footer text is white before and gray after"]}],
+    "forbidden_claims":[]
   },
   {
-    "id": "group-single-commit-history",
-    "category": "edge",
-    "task": {"id": "group_commits", "question": "Group the supplied history into milestones."},
-    "repository_data": {
-      "commits": [
-        {"sha": "b220009", "message": "Create landing page heading", "timestamp": "2025-02-09T10:00:00Z", "changed_files": ["index.html"], "diff": "Adds an h1 with text Welcome."}
-      ]
+    "id":"compare-screenshot-text-change",
+    "category":"normal",
+    "task":{"id":"compare_commits","question":"Compare the two selected commits based on their screenshots."},
+    "repository_data":{
+      "before":{"sha":"a250001","timestamp":"2025-02-03T10:00:00Z","message":"Old CTA","changed_files":["index.html"],"diff":"Text is Learn more.","screenshot_observation":"Button reads Learn more."},
+      "after":{"sha":"a250002","timestamp":"2025-02-04T10:00:00Z","message":"Update CTA","changed_files":["index.html"],"diff":"Text is Explore projects.","screenshot_observation":"Button reads Explore projects."}
     },
-    "expected_output": {"groups": [{"commit_shas": ["b220009"], "title": "Landing page heading", "rationale": "The only supplied commit adds the page heading."}], "limitations": ["A one-commit history does not establish a broader milestone sequence."]},
-    "expected_groups": [["b220009"]],
-    "required_facts": [{"fact": "The single supplied commit appears once in its own group.", "phrases": ["b220009", "one commit", "heading"]}],
-    "required_limitations": [{"behavior": "A one-commit history cannot establish a broader milestone sequence.", "phrases": ["does not establish a broader milestone sequence", "one-commit history", "no broader milestone sequence"]}],
-    "forbidden_claims": [{"claim": "Invents other commits or a multi-commit trend.", "phrases": ["previous commits", "multiple commits", "earlier milestone"]}]
+    "expected_output":{"before_commit_sha":"a250001","after_commit_sha":"a250002","changes":[{"element":"Button text","before":"Learn more","after":"Explore projects","evidence":"The button text is different in the two screenshot observations."}],"limitations":[]},
+    "required_facts":[{"fact":"Button text changes from Learn more to Explore projects.","phrases":["learn more to explore projects","button text changes to explore projects","learn more before and explore projects after"]}],
+    "forbidden_claims":[{"claim":"Claims the button destination changed without evidence.","phrases":["links to a new page","destination URL changed","opens the projects gallery"]}]
   },
   {
-    "id": "group-empty-history",
-    "category": "edge",
-    "task": {"id": "group_commits", "question": "Group the supplied history into milestones."},
-    "repository_data": {"commits": []},
-    "expected_output": {"groups": [], "limitations": ["No commits were supplied, so no grouping can be established."]},
-    "expected_groups": [],
-    "required_behaviors": [{"behavior": "Reports that the empty history cannot be grouped.", "phrases": ["no commits were supplied", "no grouping can be established", "history is empty"]}],
-    "forbidden_claims": [{"claim": "Invents a commit or milestone.", "phrases": ["commit b220", "first milestone", "the commits are grouped"]}]
+    "id":"compare-screenshot-position-change",
+    "category":"normal",
+    "task":{"id":"compare_commits","question":"Compare the two selected commits based on their screenshots."},
+    "repository_data":{
+      "before":{"sha":"a260001","timestamp":"2025-02-05T10:00:00Z","message":"Left align title","changed_files":["styles.css"],"diff":"Title text-align left.","screenshot_observation":"Title is aligned to the left edge of the content."},
+      "after":{"sha":"a260002","timestamp":"2025-02-06T10:00:00Z","message":"Center title","changed_files":["styles.css"],"diff":"Title text-align center.","screenshot_observation":"Title is centered in the content."}
+    },
+    "expected_output":{"before_commit_sha":"a260001","after_commit_sha":"a260002","changes":[{"element":"Page title position","before":"Left-aligned","after":"Centered","evidence":"The screenshot observations show the title left-aligned before and centered after."}],"limitations":[]},
+    "required_facts":[{"fact":"Title alignment changes from left to centered.","phrases":["left-aligned before and centered after","title changes from left aligned to centered","title is centered after"]}],
+    "forbidden_claims":[{"claim":"Claims the title text itself changed.","phrases":["title wording changed","new title text","heading was renamed"]}]
   },
   {
-    "id": "recommend-representative-captures",
-    "category": "normal",
-    "task": {"id": "recommend_captures", "question": "Recommend representative commits to capture for reviewing visually significant timeline changes."},
-    "repository_data": {
-      "commits": [
-        {"sha": "c330001", "message": "Change hero image", "timestamp": "2025-03-01T10:00:00Z", "changed_files": ["assets/hero.png"], "diff": "Replaces the hero image asset."},
-        {"sha": "c330002", "message": "Fix typo in comment", "timestamp": "2025-03-02T10:00:00Z", "changed_files": ["app.js"], "diff": "Corrects a spelling error in a source-code comment."},
-        {"sha": "c330003", "message": "Add responsive card layout", "timestamp": "2025-03-03T10:00:00Z", "changed_files": ["styles.css"], "diff": "Adds a media query that changes cards from three columns to one column below 600px."}
-      ]
+    "id":"compare-screenshot-size-change",
+    "category":"normal",
+    "task":{"id":"compare_commits","question":"Compare the two selected commits based on their screenshots."},
+    "repository_data":{
+      "before":{"sha":"a270001","timestamp":"2025-02-07T10:00:00Z","message":"Compact logo","changed_files":["styles.css"],"diff":"Logo width 80px.","screenshot_observation":"Logo appears 80 pixels wide."},
+      "after":{"sha":"a270002","timestamp":"2025-02-08T10:00:00Z","message":"Larger logo","changed_files":["styles.css"],"diff":"Logo width 120px.","screenshot_observation":"Logo appears 120 pixels wide."}
     },
-    "expected_output": {"recommended_commit_shas": ["c330001", "c330003"], "rationale": "The hero image replacement and responsive layout are likely to produce visible differences worth reviewing. The comment-only correction has no stated visual change.", "limitations": ["These are recommendations based on the supplied diffs; screenshot inspection is needed to verify visual significance."]},
-    "expected_commit_ids": ["c330001", "c330003"],
-    "required_facts": [{"fact": "Recommends the hero image and responsive layout commits.", "phrases": ["c330001", "c330003"]}, {"fact": "The comment typo is not presented as visually significant.", "phrases": ["comment-only correction has no stated visual change", "comment typo has no visual change", "source comment does not change appearance"]}, {"fact": "Visual significance is a recommendation, not verified evidence.", "phrases": ["recommendations based on the supplied diffs", "screenshots are needed to verify", "need screenshots to confirm"]}],
-    "required_limitations": [{"behavior": "Screenshot inspection is needed to verify recommended visual significance.", "phrases": ["screenshot inspection is needed to verify visual significance", "screenshots are needed to verify", "need screenshots to confirm"]}],
-    "forbidden_claims": [{"claim": "Claims that the screenshot results were already inspected.", "phrases": ["screenshots confirm", "visually verified", "the screenshot shows"]}]
+    "expected_output":{"before_commit_sha":"a270001","after_commit_sha":"a270002","changes":[{"element":"Logo width","before":"80 pixels","after":"120 pixels","evidence":"The supplied screenshot observations report widths of 80 and 120 pixels."}],"limitations":[]},
+    "required_facts":[{"fact":"Logo width increases from 80 to 120 pixels.","phrases":["80 to 120 pixels","width increases from 80 to 120","logo grows from 80 to 120"]}],
+    "forbidden_claims":[{"claim":"Infers resolution quality or device support.","phrases":["works on all devices","higher resolution","improves mobile support"]}]
   },
   {
-    "id": "visual-pair-difference",
-    "category": "normal",
-    "task": {"id": "visual_change_analysis", "question": "Explain the visible differences between the selected screenshots."},
-    "repository_data": {
-      "before": {"commit_sha": "d440001", "timestamp": "2025-04-01T10:00:00Z", "observation": "The page has a gray header and a white navigation link."},
-      "after": {"commit_sha": "d440002", "timestamp": "2025-04-02T10:00:00Z", "observation": "The page has a navy header and the same white navigation link."}
+    "id":"compare-multiple-files-same-visible-change",
+    "category":"normal",
+    "task":{"id":"compare_commits","question":"Compare the two selected commits based on their screenshots."},
+    "repository_data":{
+      "before":{"sha":"a280001","timestamp":"2025-02-09T10:00:00Z","message":"Old navigation","changed_files":["index.html","styles.css"],"diff":"Navigation link is Home.","screenshot_observation":"Navigation contains a Home link."},
+      "after":{"sha":"a280002","timestamp":"2025-02-10T10:00:00Z","message":"Update navigation","changed_files":["index.html","styles.css"],"diff":"Adds About link and changes spacing.","screenshot_observation":"Navigation contains Home and About links with increased spacing."}
     },
-    "expected_output": {"changes": [{"element": "Header", "before": "Gray", "after": "Navy", "evidence": "The supplied screenshot observations describe a gray header before and a navy header after."}], "limitations": ["The screenshots do not establish why the color changed."]},
-    "required_facts": [{"fact": "The header changes from gray to navy.", "phrases": ["header changes from gray to navy", "gray header before and a navy header after", "header is gray before and navy after"]}, {"fact": "The reason for the change is not established.", "phrases": ["do not establish why", "reason for the color change is unknown", "purpose is not provided"]}],
-    "required_limitations": [{"behavior": "The screenshots do not establish why the color changed.", "phrases": ["screenshots do not establish why the color changed", "reason for the color change is unknown", "purpose is not provided"]}],
-    "forbidden_claims": [{"claim": "Claims an unsupported purpose or behavior.", "phrases": ["improves conversion", "makes the page load faster", "navigation behavior changed"]}]
+    "expected_output":{"before_commit_sha":"a280001","after_commit_sha":"a280002","changes":[{"element":"Navigation links","before":"Home only","after":"Home and About","evidence":"The after screenshot includes the additional About link."},{"element":"Navigation spacing","before":"Original spacing","after":"Increased spacing","evidence":"The after screenshot shows more space between navigation links."}],"limitations":[]},
+    "required_facts":[{"fact":"An About link is added.","phrases":["about link is added","additional about link","navigation includes about"]},{"fact":"Navigation spacing increases.","phrases":["navigation spacing increases","more space between navigation links","links are farther apart"]}],
+    "forbidden_claims":[{"claim":"Claims that other page content changed.","phrases":["footer was redesigned","hero image changed","page background changed"]}]
   },
   {
-    "id": "visual-pair-incomplete",
-    "category": "ambiguous",
-    "task": {"id": "visual_change_analysis", "question": "Explain visible differences between the selected screenshots."},
-    "repository_data": {
-      "before": {"commit_sha": "d440003", "timestamp": "2025-04-03T10:00:00Z", "observation": null},
-      "after": {"commit_sha": "d440004", "timestamp": "2025-04-04T10:00:00Z", "observation": "A green Save button is visible."}
+    "id":"compare-unrelated-change-and-stable-element",
+    "category":"normal",
+    "task":{"id":"compare_commits","question":"Compare the two selected commits based on their screenshots."},
+    "repository_data":{
+      "before":{"sha":"a290001","timestamp":"2025-02-11T10:00:00Z","message":"Before footer change","changed_files":["styles.css"],"diff":"No footer change.","screenshot_observation":"Footer text is gray. Header is navy."},
+      "after":{"sha":"a290002","timestamp":"2025-02-12T10:00:00Z","message":"Change footer color","changed_files":["styles.css"],"diff":"Footer text color changes gray to white.","screenshot_observation":"Footer text is white. Header remains navy."}
     },
-    "expected_output": {"changes": [], "limitations": ["The before screenshot observation is unavailable, so a before-and-after visual difference cannot be established."]},
-    "required_behaviors": [{"behavior": "Acknowledges that missing before evidence prevents comparison.", "phrases": ["before screenshot observation is unavailable", "cannot establish a before-and-after difference", "no before observation to compare"]}],
-    "required_limitations": [{"behavior": "The missing before observation is stated as a limitation.", "phrases": ["before screenshot observation is unavailable", "cannot establish a before-and-after visual difference", "no before observation to compare"]}],
-    "forbidden_claims": [{"claim": "Invents a visual change from missing before evidence.", "phrases": ["changed from blue to green", "the button became green", "was previously red"]}]
+    "expected_output":{"before_commit_sha":"a290001","after_commit_sha":"a290002","changes":[{"element":"Footer text color","before":"Gray","after":"White","evidence":"Footer text is gray before and white after."}],"limitations":[]},
+    "required_facts":[{"fact":"Footer text changes from gray to white.","phrases":["footer text changes from gray to white","gray footer before and white after"]}],
+    "forbidden_claims":[{"claim":"Claims the header color changed.","phrases":["header changes from navy","header becomes gray","header color changed"]}]
+  },
+  {
+    "id":"compare-date-limitations-no-screenshot",
+    "category":"ambiguous",
+    "task":{"id":"compare_commits","question":"Compare the two selected commits based on their screenshots."},
+    "repository_data":{
+      "before":{"sha":"a300001","timestamp":"2025-02-13T10:00:00Z","message":"Earlier commit","changed_files":["index.html"],"diff":"Updates page markup.","screenshot_observation":null},
+      "after":{"sha":"a300002","timestamp":"2025-02-14T10:00:00Z","message":"Later commit","changed_files":["index.html"],"diff":"Updates page markup.","screenshot_observation":null}
+    },
+    "expected_output":{"before_commit_sha":"a300001","after_commit_sha":"a300002","changes":[],"limitations":["Neither screenshot observation is available, so no visible comparison can be made."]},
+    "required_limitations":[{"behavior":"States that both screenshot observations are missing.","phrases":["neither screenshot observation is available","both screenshots are unavailable","no screenshot observations are available"]}],
+    "forbidden_claims":[{"claim":"Infers visual results from commit messages or diffs without screenshot evidence.","phrases":["the page looks different","a new element appears","the layout changed"]}]
   }
 ]
