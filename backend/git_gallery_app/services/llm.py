@@ -20,6 +20,8 @@ class ComparisonRequestError(Exception):
         super().__init__(message)
         self.code = code
 
+
+#Dynamic loading of the system prompt 
 def load_system_prompt():
     configured_path = settings.SYSTEM_PROMPT_PATH
 
@@ -49,6 +51,8 @@ def load_system_prompt():
 
     return prompt, path.stem
 
+# Encodes the images to base64 to be sent to the OpenAI API. 
+# This is necessary because we cannot send the images directly to the API
 def _png_data_url(path):
     try:
         with Path(path).open("rb") as image_file:
@@ -68,7 +72,7 @@ def _png_data_url(path):
     encoded = base64.b64encode(image_bytes).decode("ascii")
     return f"data:image/png;base64,{encoded}"
 
-
+# Actual call to the LLM (OpenAI)
 def request_image_comparison(
     before_path,
     after_path,
@@ -122,6 +126,7 @@ def request_image_comparison(
         ).encode("utf-8")
     )
 
+    # Ensures that we don't send the request if it's too large
     if payload_size > MAX_REQUEST_BYTES:
         raise ComparisonRequestError(
             "request_too_large",
@@ -134,8 +139,9 @@ def request_image_comparison(
             timeout=60.0,
             max_retries=1,
         ) as client:
-            response = client.responses.create(**body)
+            response = client.responses.create(**body) # Actual call to API
 
+    # Bunch of exception handling to catch any errors
     except APITimeoutError as error:
         raise ComparisonRequestError(
             "openai_timeout",
@@ -176,7 +182,9 @@ def request_image_comparison(
                     )
 
     try:
-        return result_type.model_validate_json(response.output_text)
+        # Validate the response against the expected schema
+        # Fail if the structured response does not match what we want
+        return result_type.model_validate_json(response.output_text) 
     except ValidationError as error:
         raise ComparisonRequestError(
             "invalid_response",
