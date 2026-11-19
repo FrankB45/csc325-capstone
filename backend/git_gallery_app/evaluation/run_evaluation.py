@@ -60,16 +60,18 @@ def load_golden_set(path: Path = GOLDEN_SET_PATH) -> list[dict]:
             raise ValueError(f"Golden case {case['id']} must select the compare_commits task.")
         if not isinstance(case["repository_data"], dict):
             raise ValueError(f"Golden case {case['id']} needs repository_data.")
-        before = case["repository_data"].get("before")
-        after = case["repository_data"].get("after")
+        before_sha = case["repository_data"].get("before_commit_sha")
+        after_sha = case["repository_data"].get("after_commit_sha")
         if (
-            not isinstance(before, dict)
-            or not isinstance(after, dict)
-            or not isinstance(before.get("sha"), str)
-            or not isinstance(after.get("sha"), str)
-            or before["sha"] == after["sha"]
+            not isinstance(before_sha, str)
+            or not isinstance(after_sha, str)
+            or not before_sha
+            or not after_sha
+            or before_sha == after_sha
         ):
-            raise ValueError(f"Golden case {case['id']} must contain two distinct commit records.")
+            raise ValueError(
+                f"Golden case {case['id']} must contain two distinct before/after commit SHAs."
+            )
         required_facts = case.get("required_facts", [])
         required_behaviors = case.get("required_behaviors", [])
         required_limitations = case.get("required_limitations", [])

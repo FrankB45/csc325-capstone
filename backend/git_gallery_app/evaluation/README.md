@@ -22,18 +22,16 @@ recommendations, and open-ended chat are outside the current evaluation scope.
 
 ## Structured response format
 
-The golden set uses this proposed shape:
+The golden set uses the exact current response shape:
 
 ```json
 {
-  "before_commit_sha": "selected before commit",
-  "after_commit_sha": "selected after commit",
   "changes": [
     {
       "element": "affected visible element",
-      "before": "appearance in before screenshot",
-      "after": "appearance in after screenshot",
-      "evidence": "support from supplied screenshot observations"
+      "location": "where it appears on the page",
+      "file_path": "styles.css",
+      "description": "observable before-and-after difference"
     }
   ],
   "limitations": ["missing evidence or uncertainty"]
@@ -44,21 +42,20 @@ An empty `changes` list is appropriate when no visual difference is supported;
 the output must explain that result or state the relevant limitation. The
 project requirements call for descriptions of affected elements and their
 visible before/after states, and explicit handling of no-difference results.
-They do not define exact API field names, so this response schema remains a
-proposal pending confirmation from the feature owner. The suite does not add
-coordinates or image-highlight metadata because the repository does not
-specify a structured location format.
+This matches the supplied system prompt: no commit IDs or before/after/evidence
+fields belong in the response. The suite does not add coordinates or
+image-highlight metadata.
 
 ## Evaluation checks
 
 ### Hallucination / grounding — 90% threshold
 
-Checks that each response uses the proposed structure and identifies the exact
-selected commit pair. It rejects unsupported commit identifiers, verifies
-that reported before/after states match the manually defined reference, checks
-case-specific visible differences and limitations, and flags listed
-unacceptable claims. Incomplete screenshot or diff evidence should be reported
-as a limitation rather than guessed or followed by a question.
+Checks that each response uses the exact structure, validates all change fields,
+rejects unsupported or truncated `file_path` values, and ensures responses with
+missing screenshots contain no fabricated changes. It checks case-specific
+visible differences and limitations and flags listed unacceptable claims.
+Incomplete screenshot or diff evidence should be reported as a limitation
+rather than guessed or followed by a question.
 
 Phrase-based checks are not a general semantic model and can miss unanticipated
 fabrications. They do not prove that the provided screenshot observations
@@ -69,8 +66,8 @@ results.
 
 Each pair is submitted three times with identical task and repository data.
 The first response is reused for the grounding check. All three responses must
-be grounded and agree on the selected commit pair, changed elements,
-before/after states, and limitations. Change ordering is ignored. The check
+be grounded and agree on changed elements, locations, source-file attribution,
+factual conclusions, and limitations. Change ordering is ignored. The check
 does not require identical prose, but normalized structured values are a
 lightweight approximation of semantic equivalence.
 

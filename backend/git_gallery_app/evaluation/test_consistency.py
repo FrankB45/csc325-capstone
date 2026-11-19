@@ -16,8 +16,8 @@ def evaluate_consistency(case: dict, responses: list[str]) -> list[str]:
         failures.append("one or more responses do not follow the compare_commits output format")
     elif not all(signature == signatures[0] for signature in signatures[1:]):
         failures.append(
-            "repeated comparisons differ in commit pair, changed elements, "
-            "before/after states, or limitations"
+            "repeated comparisons differ in changed elements, locations, "
+            "source file attribution, factual conclusions, or limitations"
         )
 
     for index, response in enumerate(responses, start=1):
