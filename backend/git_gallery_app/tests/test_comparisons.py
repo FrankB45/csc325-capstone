@@ -174,3 +174,27 @@ class ComparisonServiceTests(SimpleTestCase):
             read.call_args.args[0],
             settings.BASE_DIR / settings.SYSTEM_PROMPT_PATH,
         )
+    
+    def test_claimed_attempt_is_processed_without_claiming_again(self):
+        self.record.status = Comparison.Status.PROCESSING
+        self.record.attempts = 1
+
+        comparisons.process_comparison(
+            self.record.pk,
+            claimed_attempt=1,
+        )
+
+        self.queryset.update.assert_called_once()
+        self.client.responses.create.assert_called_once()
+
+    def test_old_attempt_does_not_call_api(self):
+        self.record.status = Comparison.Status.PROCESSING
+        self.record.attempts = 2
+
+        comparisons.process_comparison(
+            self.record.pk,
+            claimed_attempt=1,
+        )
+
+        self.queryset.update.assert_not_called()
+        self.openai.assert_not_called()

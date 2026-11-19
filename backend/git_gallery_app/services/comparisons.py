@@ -105,22 +105,13 @@ def get_or_create_comparison(job, first_position, second_position):
 
     return comparison
 
-
-def process_comparison(comparison_id):
-
-    #pulls from db by comparison_id
-    comparison = Comparison.objects.get(pk=comparison_id)
-
-    #completed, failed or processing are returned (dont need processing)
-    if comparison.status != Comparison.Status.QUEUED:
-        return comparison
-
-    #keep track of the processing attempts
+def claim_comparison(comparison):
+    # Attempt to claim a comparison for processing. 
+    # Returns the new attempt number if successful, or None if another process claimed it first.
     attempt = comparison.attempts + 1
 
-    # Try to claim this comparison for processing
-    claimed = Comparison.objects.filter(
-        pk=comparison_id,
+    updated = Comparison.objects.filter(
+        pk=comparison.pk,
         status=Comparison.Status.QUEUED,
         attempts=comparison.attempts,
     ).update(
@@ -137,10 +128,29 @@ def process_comparison(comparison_id):
         llm_error=None,
     )
 
-    if claimed == 0:
-        # Another process claimed this comparison first, so we just return it
-        comparison.refresh_from_db()
-        return comparison
+    return attempt if updated == 1 else None
+
+def process_comparison(comparison_id, *, claimed_attempt=None):
+
+    #pulls from db by comparison_id
+    comparison = Comparison.objects.get(pk=comparison_id)
+
+    # claimed_attempt is used when a retry occurs
+    if claimed_attempt is None:
+        # If the comparison is already processing we just return it 
+        if comparison.status != Comparison.Status.QUEUED: 
+            return comparison
+
+        attempt = claim_comparison(comparison)
+        # If we are unable to claim the comparison just return out
+        if attempt is None:
+            comparison.refresh_from_db()
+            return comparison
+    else:
+        attempt = claimed_attempt
+        # If the comparison is not in PROCESSING state or the attempt number does not match, we return it without processing
+        if ( comparison.status != Comparison.Status.PROCESSING or comparison.attempts != attempt ): 
+            return comparison
 
     # Now we can safely process the comparison, since we have claimed it for processing - Set Status PROCESSING
     active_attempt = Comparison.objects.filter(

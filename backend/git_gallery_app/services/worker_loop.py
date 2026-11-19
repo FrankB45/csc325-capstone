@@ -5,6 +5,8 @@ import time
 from .jobs import claim_next_job, fail_job, recover_stale_jobs, release_job
 from .worker import UNEXPECTED_ERROR, process_job
 
+from .comparison_worker import (process_next_comparison, recover_stale_comparisons)
+
 logger = logging.getLogger(__name__)
 
 POLL_SECONDS = 2                     # how often to check an empty queue
@@ -50,10 +52,12 @@ def run_worker(poll_seconds=POLL_SECONDS, *, process=process_job,
                 last_recovery is None
                 or clock() - last_recovery >= RECOVERY_INTERVAL_SECONDS
             ):
-                _recover()
+                recover_work()
                 last_recovery = clock()
 
-            did_work = work_once(process)
+            did_comparison = process_next_comparison()
+            did_capture = work_once(process)
+            did_work = did_comparison or did_capture
         except Exception:
             # Not a job problem. Probably MongoDB is unreachable. Don't crash; wait and retry.
             logger.exception("Worker error; retrying in %ss", ERROR_BACKOFF_SECONDS)
@@ -64,7 +68,10 @@ def run_worker(poll_seconds=POLL_SECONDS, *, process=process_job,
             sleep(poll_seconds)   # queue empty: wait a bit. Busy: go straight to the next job.
 
 
-def _recover() -> None:
+def recover_work() -> None:
     requeued, failed = recover_stale_jobs()
     if requeued or failed:
         logger.warning("Recovered abandoned jobs: %d requeued, %d failed", requeued, failed)
+    failed_comparisons = recover_stale_comparisons()
+    if failed_comparisons:
+        logger.warning("Recovered abandoned comparisons: %d failed", failed_comparisons)

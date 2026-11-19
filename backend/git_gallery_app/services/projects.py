@@ -1,4 +1,4 @@
-from ..models import Capture, Job, Project, RepositorySnapshot
+from ..models import Capture, Job, Project, RepositorySnapshot, Comparison
 from django.urls import reverse
 from .github import parse_github_url
 from django.conf import settings
@@ -202,6 +202,18 @@ def delete_project(project):
         raise ProjectBusyError("This project is still being processed. Try again once it finishes.")
 
     job_ids = [str(job.pk) for job in jobs]
+    # Checks for busy comparisons after jobs
+    if Comparison.objects.filter(
+    capture_job_id__in=[job.pk for job in jobs],
+    status__in=[
+        Comparison.Status.QUEUED,
+        Comparison.Status.PROCESSING,
+    ],
+    ).exists():
+        raise ProjectBusyError(
+            "A comparison is still being processed. "
+            "Try again once it finishes."
+        )
 
     Job.objects.filter(repo_snapshot_id__in=snapshot_ids).delete()
     RepositorySnapshot.objects.filter(pk__in=snapshot_ids).delete()
