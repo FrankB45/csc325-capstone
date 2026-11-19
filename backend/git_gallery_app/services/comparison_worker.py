@@ -46,6 +46,11 @@ def process_next_comparison():
         if attempt is not None:
             break
 
+    logger.info(
+        "Processing comparison %s (attempt %s)",
+        comparison.pk,
+        attempt,
+    )
     code = "comparison_worker_failed"
     message = "Comparison processing stopped before a result was saved."
 
@@ -102,6 +107,28 @@ def process_next_comparison():
         code,
         message,
     )
+    # Logging the outcome
+    outcome = (
+    Comparison.objects
+    .filter(pk=comparison.pk, attempts=attempt)
+    .values("status", "result_source", "error_code")
+    .first()
+    )
+
+    if outcome is not None:
+        log = (
+            logger.warning
+            if outcome["status"] == Comparison.Status.FAILED
+            else logger.info
+        )
+        log(
+            "Comparison %s attempt %d: status=%s source=%s error=%s",
+            comparison.pk,
+            attempt,
+            outcome["status"],
+            outcome["result_source"] or "-",
+            outcome["error_code"] or "-",
+        )
     return True
 
 
