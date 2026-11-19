@@ -2,6 +2,9 @@ from pydantic import BaseModel, ConfigDict
 from .llm import request_image_comparison
 
 import logging
+import json 
+
+from .diff_context import get_diff_context
 from pathlib import Path
 
 from django.conf import settings
@@ -29,13 +32,14 @@ class ComparisonResult(BaseModel):
     changes: list[ComparisonChange]
     limitations: list[str]
 
-def compare_screenshots(before_path, after_path, system_prompt):
+def compare_screenshots(before_path, after_path, system_prompt, *, diff_context = ""):
     # Wrapper for LLM call 
     return request_image_comparison(
         before_path,
         after_path,
         system_prompt,
         result_type=ComparisonResult,  
+        diff_context=diff_context,
     )
 
 def _get_captures(job, before_position, after_position):
@@ -178,12 +182,40 @@ def process_comparison(comparison_id, *, claimed_attempt=None):
         )
         # Here we actually perform the comparison by calling the LLM service
         system_prompt, version = load_system_prompt() #load prompt here to capture any errors
+
         outcome["prompt_version"] = version
+        # Load context from the git diff
+        context = get_diff_context(
+            comparison.capture_job.repo_snapshot.repository_url,
+            before.commit_sha,
+            after.commit_sha,
+            page_path=comparison.capture_job.page_path,
+        )
+
         result = compare_screenshots(
             _screenshot_path(before),
             _screenshot_path(after),
             system_prompt,
+            diff_context=json.dumps(context, ensure_ascii=False),
         )
+        # We only want to include the files that are html css js
+        allowed_paths = {
+            item["file_path"]
+            for item in context["files"]
+            if item["patch"]
+        }
+
+        for change in result.changes:
+            if change.file_path is not None and change.file_path not in allowed_paths:
+                change.file_path = None
+                context["limitations"].append(
+                    "A file reference could not be verified against the supplied patches."
+                )
+
+        result.limitations = list(dict.fromkeys([
+            *result.limitations,
+            *context["limitations"],
+        ]))
 
         result_data = result.model_dump(mode="json")
 

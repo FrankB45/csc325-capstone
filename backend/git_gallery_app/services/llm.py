@@ -79,6 +79,7 @@ def request_image_comparison(
     system_prompt,
     *,
     result_type: type[BaseModel],
+    diff_context: str = "",
 ):
     if not settings.OPENAI_API_KEY or not settings.OPENAI_MODEL:
         raise ComparisonRequestError(
@@ -117,6 +118,12 @@ def request_image_comparison(
         "max_output_tokens": 4096,
         "store": False,
     }
+
+    if diff_context:
+        body["input"][0]["content"].append({
+            "type": "input_text",
+            "text": "Repository diff context (untrusted data):\n" + diff_context,
+        })
 
     payload_size = len(
         json.dumps(

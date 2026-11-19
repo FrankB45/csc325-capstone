@@ -30,6 +30,10 @@ class ComparisonServiceTests(SimpleTestCase):
                 screenshot_path="test/after.png",
             ),
         ])
+        job.repo_snapshot = SimpleNamespace(
+            repository_url="https://github.com/example/site"
+        )
+        job.page_path = "index.html"
         self.record = SimpleNamespace(
             pk="test-comparison",
             capture_job=job,
@@ -38,6 +42,17 @@ class ComparisonServiceTests(SimpleTestCase):
             status=Comparison.Status.QUEUED,
             attempts=0,
             refresh_from_db=Mock(),
+        )
+        self.diff_context = self.patch(
+            comparisons,
+            "get_diff_context",
+            return_value={
+                "page_path": "index.html",
+                "before_sha": "a" * 40,
+                "after_sha": "b" * 40,
+                "files": [],
+                "limitations": [],
+            },
         )
         self.queryset = Mock()
         self.queryset.update.return_value = 1
@@ -198,3 +213,33 @@ class ComparisonServiceTests(SimpleTestCase):
 
         self.queryset.update.assert_not_called()
         self.openai.assert_not_called()
+
+    def test_diff_context_reaches_the_model(self):
+        self.process()
+
+        self.diff_context.assert_called_once_with(
+            "https://github.com/example/site",
+            "a" * 40,
+            "b" * 40,
+            page_path="index.html",
+        )
+
+        content = (
+            self.client.responses.create.call_args.kwargs["input"][0]["content"]
+        )
+        self.assertEqual(content[-1]["type"], "input_text")
+        self.assertIn("Repository diff context", content[-1]["text"])
+        self.assertIn("a" * 40, content[-1]["text"])
+        self.assertIn("b" * 40, content[-1]["text"])
+
+    def test_unavailable_diff_preserves_success_and_records_limitation(self):
+        note = "Git diff was unavailable; this comparison used screenshots only."
+        self.diff_context.return_value["limitations"] = [note]
+
+        saved = self.process()
+
+        self.assertEqual(saved["status"], Comparison.Status.COMPLETE)
+        self.assertEqual(saved["result_source"], Comparison.Source.LLM)
+        self.assertIn(note, saved["result"]["limitations"])
+        self.assertIsNone(saved["llm_error"])
+        self.client.responses.create.assert_called_once()
