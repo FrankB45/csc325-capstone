@@ -14,13 +14,13 @@ from .services.github import (
 
 from django.core.exceptions import ValidationError
 
-from .serializers import CreateAnalysisSerializer
+from .serializers import CreateAnalysisSerializer, CreateComparisonSerializer, ComparisonSerializer
 from .services.analysis_setup import AnalysisSetupError, start_analysis
 
 from bson import ObjectId
 from bson.errors import InvalidId
 
-from .models import Project, Capture, Job
+from .models import Project, Capture, Job, Comparison
 from .services.projects import ProjectBusyError, delete_project, get_project_details, get_project_summaries
 
 from pathlib import Path
@@ -28,6 +28,9 @@ from pathlib import Path
 from django.conf import settings
 from django.http import FileResponse, Http404
 
+from .services.comparisons import ( ComparisonRetryError, get_or_create_comparison, retry_comparison, )
+
+from .services.llm import ComparisonRequestError
 
 logger = logging.getLogger(__name__)
 
@@ -266,3 +269,60 @@ def get_project(request, project_id):
         return Response(status=204)
 
     return Response(get_project_details(project))
+
+@api_view(["POST"])
+def create_comparison(request, job_id):
+    serializer = CreateComparisonSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    try:
+        job = Job.objects.get(pk=ObjectId(job_id))
+    except (InvalidId, Job.DoesNotExist):
+        return Response({"error": "Job not found."}, status=404)
+
+    try:
+        comparison = get_or_create_comparison(
+            job,
+            **serializer.validated_data,
+        )
+    except ComparisonRequestError as error:
+        return Response(
+            {"error": str(error), "code": error.code},
+            status=400,
+        )
+
+    pending = comparison.status in (
+        Comparison.Status.QUEUED,
+        Comparison.Status.PROCESSING,
+    )
+
+    return Response(
+        ComparisonSerializer(comparison).data,
+        status=202 if pending else 200,
+    )
+
+
+@api_view(["GET"])
+def get_comparison(request, comparison_id):
+    try:
+        comparison = Comparison.objects.get(pk=ObjectId(comparison_id))
+    except (InvalidId, Comparison.DoesNotExist):
+        return Response({"error": "Comparison not found."}, status=404)
+
+    return Response(ComparisonSerializer(comparison).data)
+
+
+@api_view(["POST"])
+def retry_comparison_view(request, comparison_id):
+    try:
+        comparison = Comparison.objects.get(pk=ObjectId(comparison_id))
+        comparison = retry_comparison(comparison)
+    except (InvalidId, Comparison.DoesNotExist):
+        return Response({"error": "Comparison not found."}, status=404)
+    except ComparisonRetryError as error:
+        return Response({"error": str(error)}, status=409)
+
+    return Response(
+        ComparisonSerializer(comparison).data,
+        status=202,
+    )

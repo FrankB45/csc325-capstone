@@ -216,6 +216,40 @@ def process_comparison(comparison_id, *, claimed_attempt=None):
     comparison.refresh_from_db()
     return comparison
 
+class ComparisonRetryError(Exception):
+    pass
 
+
+def retry_comparison(comparison):
+    """Takes a failed comparison and resets it to Queued"""
+    if comparison.status != Comparison.Status.FAILED:
+        raise ComparisonRetryError(
+            "Only failed comparisons can be retried."
+        )
+
+    updated = Comparison.objects.filter(
+        pk=comparison.pk,
+        status=Comparison.Status.FAILED,
+        attempts=comparison.attempts,
+    ).update(
+        status=Comparison.Status.QUEUED,
+        result=None,
+        result_source=None,
+        model_name="",
+        prompt_version="",
+        error_code="",
+        error_message="",
+        llm_error=None,
+        started_at=None,
+        completed_at=None,
+    )
+
+    if updated != 1:
+        raise ComparisonRetryError(
+            "The comparison changed. Refresh its status and try again."
+        )
+
+    comparison.refresh_from_db()
+    return comparison
 
 
