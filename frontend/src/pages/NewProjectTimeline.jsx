@@ -10,8 +10,8 @@ import EmptyCommitSlot from "../components/EmptyCommitSlot/EmptyCommitSlot.jsx";
 import Timeline from "../components/Timeline/Timeline.jsx";
 import CommitOverlay from "../components/CommitOverlay/CommitOverlay.jsx";
 import Modal from "../components/Modal/Modal.jsx";
-import AIAssistant from "../components/AIAssistant/AIAssistant.jsx";
 import styles from "./ProjectTimeline.module.css";
+import Toolbox from "../components/Toolbox/Toolbox.jsx";
 
 const FULL_SCREENSHOT_VIEW_WIDTH = 1100;
 const COMPARISON_PANEL_WIDTH = 760;
@@ -442,8 +442,7 @@ const selectedPage =
     }
   }
 
-  // TODO: call the backend AI endpoint.
-  const handleAsk = async () => "The AI Assistant isn’t connected to the backend yet.";
+
 
   return (
     <PageLayout width="timeline" watermark="center">
@@ -593,7 +592,12 @@ const selectedPage =
             </section>
           </Modal>
         )}
-        <AIAssistant onAsk={handleAsk} />
+        <Toolbox
+          jobId={analysis.job_id}
+          pagePath={analysis.page_path}
+          mode={mode}
+          commits={compareSlotCommits}
+        />
       </div>
     </PageLayout>
   );
