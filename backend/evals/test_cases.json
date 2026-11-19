@@ -92,5 +92,59 @@
       "selected_commits": "not-a-list"
     },
     "expected_valid": false
+  },
+  {
+    "contract": "comparison_result",
+    "name": "comparison result with changes and limitations is accepted",
+    "mock_ai_response": {
+      "changes": [
+        {
+          "element": "Page color palette",
+          "location": "Page background and header",
+          "file_path": "styles.css",
+          "description": "The background changes from blue to dark navy, with light text in the header."
+        }
+      ],
+      "limitations": [
+        "The screenshots show only one viewport size.",
+        "Source context includes only HTML, CSS, and JavaScript."
+      ]
+    },
+    "expected_valid": true
+  },
+  {
+    "contract": "comparison_result",
+    "name": "comparison change missing a required field is rejected",
+    "mock_ai_response": {
+      "changes": [
+        {
+          "element": "Page color palette",
+          "location": "Page background",
+          "file_path": "styles.css"
+        }
+      ],
+      "limitations": []
+    },
+    "expected_valid": false
+  },
+  {
+    "contract": "comparison_result",
+    "name": "comparison changes must be a list",
+    "mock_ai_response": {
+      "changes": "No changes",
+      "limitations": []
+    },
+    "expected_valid": false
+  },
+  {
+    "contract": "comparison_result",
+    "name": "comparison limitations must be strings",
+    "mock_ai_response": {
+      "changes": [],
+      "limitations": [
+        42
+      ]
+    },
+    "expected_valid": false
   }
 ]

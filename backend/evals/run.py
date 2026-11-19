@@ -20,10 +20,30 @@ def response_is_valid(response, history):
     return True
 
 
+def comparison_result_is_valid(response):
+    if not isinstance(response, dict):
+        return False
+
+    changes = response.get("changes")
+    limitations = response.get("limitations")
+    if not isinstance(changes, list) or not isinstance(limitations, list):
+        return False
+
+    required_change_fields = ("element", "location", "file_path", "description")
+    return all(
+        isinstance(change, dict)
+        and all(isinstance(change.get(field), str) for field in required_change_fields)
+        for change in changes
+    ) and all(isinstance(limitation, str) for limitation in limitations)
+
+
 def evaluate(cases):
     results = []
     for case in cases:
-        actual = response_is_valid(case["mock_ai_response"], case["history"])
+        if case.get("contract") == "comparison_result":
+            actual = comparison_result_is_valid(case["mock_ai_response"])
+        else:
+            actual = response_is_valid(case["mock_ai_response"], case["history"])
         results.append((case["name"], actual == case["expected_valid"]))
     return results
 
