@@ -1,0 +1,367 @@
+[
+  {
+    "name": "valid recommendations are accepted in history order",
+    "history": [
+      "0000000000000000000000000000000000000001",
+      "0000000000000000000000000000000000000002",
+      "0000000000000000000000000000000000000003"
+    ],
+    "mock_ai_response": {
+      "selected_commits": [
+        "0000000000000000000000000000000000000003",
+        "0000000000000000000000000000000000000001"
+      ]
+    },
+    "expected_valid": true
+  },
+  {
+    "name": "unknown commit recommendations are rejected",
+    "history": [
+      "0000000000000000000000000000000000000001",
+      "0000000000000000000000000000000000000002"
+    ],
+    "mock_ai_response": {
+      "selected_commits": [
+        "ffffffffffffffffffffffffffffffffffffffff"
+      ]
+    },
+    "expected_valid": false
+  },
+  {
+    "name": "duplicate recommendations are rejected",
+    "history": [
+      "0000000000000000000000000000000000000001",
+      "0000000000000000000000000000000000000002"
+    ],
+    "mock_ai_response": {
+      "selected_commits": [
+        "0000000000000000000000000000000000000001",
+        "0000000000000000000000000000000000000001"
+      ]
+    },
+    "expected_valid": false
+  },
+  {
+    "name": "empty recommendations are rejected",
+    "history": [
+      "0000000000000000000000000000000000000001"
+    ],
+    "mock_ai_response": {
+      "selected_commits": []
+    },
+    "expected_valid": false
+  },
+  {
+    "name": "over-limit recommendations are rejected",
+    "history": [
+      "0000000000000000000000000000000000000001",
+      "0000000000000000000000000000000000000002",
+      "0000000000000000000000000000000000000003",
+      "0000000000000000000000000000000000000004",
+      "0000000000000000000000000000000000000005",
+      "0000000000000000000000000000000000000006",
+      "0000000000000000000000000000000000000007",
+      "0000000000000000000000000000000000000008",
+      "0000000000000000000000000000000000000009",
+      "0000000000000000000000000000000000000010",
+      "0000000000000000000000000000000000000011"
+    ],
+    "mock_ai_response": {
+      "selected_commits": [
+        "0000000000000000000000000000000000000001",
+        "0000000000000000000000000000000000000002",
+        "0000000000000000000000000000000000000003",
+        "0000000000000000000000000000000000000004",
+        "0000000000000000000000000000000000000005",
+        "0000000000000000000000000000000000000006",
+        "0000000000000000000000000000000000000007",
+        "0000000000000000000000000000000000000008",
+        "0000000000000000000000000000000000000009",
+        "0000000000000000000000000000000000000010",
+        "0000000000000000000000000000000000000011"
+      ]
+    },
+    "expected_valid": false
+  },
+  {
+    "name": "malformed response is rejected",
+    "history": [
+      "0000000000000000000000000000000000000001"
+    ],
+    "mock_ai_response": {
+      "selected_commits": "not-a-list"
+    },
+    "expected_valid": false
+  },
+  {
+    "contract": "comparison_result",
+    "name": "comparison result with changes and limitations is accepted",
+    "mock_ai_response": {
+      "changes": [
+        {
+          "element": "Page color palette",
+          "location": "Page background and header",
+          "file_path": "styles.css",
+          "description": "The background changes from blue to dark navy, with light text in the header."
+        }
+      ],
+      "limitations": [
+        "The screenshots show only one viewport size.",
+        "Source context includes only HTML, CSS, and JavaScript."
+      ]
+    },
+    "expected_valid": true
+  },
+  {
+    "contract": "comparison_result",
+    "name": "comparison change missing a required field is rejected",
+    "mock_ai_response": {
+      "changes": [
+        {
+          "element": "Page color palette",
+          "location": "Page background",
+          "file_path": "styles.css"
+        }
+      ],
+      "limitations": []
+    },
+    "expected_valid": false
+  },
+  {
+    "contract": "comparison_result",
+    "name": "comparison changes must be a list",
+    "mock_ai_response": {
+      "changes": "No changes",
+      "limitations": []
+    },
+    "expected_valid": false
+  },
+  {
+    "contract": "comparison_result",
+    "name": "comparison limitations must be strings",
+    "mock_ai_response": {
+      "changes": [],
+      "limitations": [
+        42
+      ]
+    },
+    "expected_valid": false
+  },
+  {
+    "contract": "commit_grouping",
+    "name": "complete consecutive groups include singleton and UI milestone evidence",
+    "history": [
+      "0000000000000000000000000000000000000001",
+      "0000000000000000000000000000000000000002",
+      "0000000000000000000000000000000000000003",
+      "0000000000000000000000000000000000000004"
+    ],
+    "commit_details": {
+      "0000000000000000000000000000000000000001": {
+        "message": "Create landing page",
+        "changed_website_files": ["index.html"]
+      },
+      "0000000000000000000000000000000000000002": {
+        "message": "Add responsive navigation",
+        "changed_website_files": ["styles.css"]
+      },
+      "0000000000000000000000000000000000000003": {
+        "message": "Polish mobile menu",
+        "changed_website_files": ["menu.js", "styles.css"]
+      },
+      "0000000000000000000000000000000000000004": {
+        "message": "Document local setup",
+        "changed_website_files": []
+      }
+    },
+    "mock_ai_response": {
+      "groups": [
+        {
+          "title": "Initial landing page",
+          "explanation": "Create the first page structure.",
+          "commits": ["0000000000000000000000000000000000000001"],
+          "likely_ui_milestone": false
+        },
+        {
+          "title": "Responsive navigation",
+          "explanation": "Add responsive navigation and Polish mobile menu update styles.css, likely making the header fit smaller screens; compare screenshots to verify the visual impact.",
+          "commits": [
+            "0000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000003"
+          ],
+          "likely_ui_milestone": true
+        },
+        {
+          "title": "Setup documentation",
+          "explanation": "Document local setup instructions.",
+          "commits": ["0000000000000000000000000000000000000004"],
+          "likely_ui_milestone": false
+        }
+      ]
+    },
+    "expected_valid": true
+  },
+  {
+    "contract": "commit_grouping",
+    "name": "grouping that omits an analyzed commit is rejected",
+    "history": [
+      "0000000000000000000000000000000000000001",
+      "0000000000000000000000000000000000000002",
+      "0000000000000000000000000000000000000003",
+      "0000000000000000000000000000000000000004"
+    ],
+    "mock_ai_response": {
+      "groups": [
+        {
+          "title": "First changes",
+          "explanation": "Initial page changes.",
+          "commits": ["0000000000000000000000000000000000000001"],
+          "likely_ui_milestone": false
+        },
+        {
+          "title": "Later changes",
+          "explanation": "The later updates.",
+          "commits": [
+            "0000000000000000000000000000000000000003",
+            "0000000000000000000000000000000000000004"
+          ],
+          "likely_ui_milestone": false
+        }
+      ]
+    },
+    "expected_valid": false
+  },
+  {
+    "contract": "commit_grouping",
+    "name": "duplicate commit membership is rejected",
+    "history": [
+      "0000000000000000000000000000000000000001",
+      "0000000000000000000000000000000000000002",
+      "0000000000000000000000000000000000000003",
+      "0000000000000000000000000000000000000004"
+    ],
+    "mock_ai_response": {
+      "groups": [
+        {
+          "title": "First changes",
+          "explanation": "The first updates.",
+          "commits": [
+            "0000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000002"
+          ],
+          "likely_ui_milestone": false
+        },
+        {
+          "title": "Later changes",
+          "explanation": "The later updates.",
+          "commits": [
+            "0000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000003",
+            "0000000000000000000000000000000000000004"
+          ],
+          "likely_ui_milestone": false
+        }
+      ]
+    },
+    "expected_valid": false
+  },
+  {
+    "contract": "commit_grouping",
+    "name": "non-consecutive group members are rejected",
+    "history": [
+      "0000000000000000000000000000000000000001",
+      "0000000000000000000000000000000000000002",
+      "0000000000000000000000000000000000000003",
+      "0000000000000000000000000000000000000004"
+    ],
+    "mock_ai_response": {
+      "groups": [
+        {
+          "title": "Mixed changes",
+          "explanation": "These changes are related.",
+          "commits": [
+            "0000000000000000000000000000000000000001",
+            "0000000000000000000000000000000000000003"
+          ],
+          "likely_ui_milestone": false
+        },
+        {
+          "title": "Other changes",
+          "explanation": "The remaining work.",
+          "commits": [
+            "0000000000000000000000000000000000000002",
+            "0000000000000000000000000000000000000004"
+          ],
+          "likely_ui_milestone": false
+        }
+      ]
+    },
+    "expected_valid": false
+  },
+  {
+    "contract": "commit_grouping",
+    "name": "unknown commit membership is rejected",
+    "history": [
+      "0000000000000000000000000000000000000001",
+      "0000000000000000000000000000000000000002"
+    ],
+    "mock_ai_response": {
+      "groups": [
+        {
+          "title": "Repository changes",
+          "explanation": "The repository updates.",
+          "commits": [
+            "0000000000000000000000000000000000000001",
+            "ffffffffffffffffffffffffffffffffffffffff"
+          ],
+          "likely_ui_milestone": false
+        }
+      ]
+    },
+    "expected_valid": false
+  },
+  {
+    "contract": "commit_grouping",
+    "name": "UI milestone without cited evidence is rejected",
+    "history": ["0000000000000000000000000000000000000001"],
+    "commit_details": {
+      "0000000000000000000000000000000000000001": {
+        "message": "Add responsive navigation",
+        "changed_website_files": ["styles.css"]
+      }
+    },
+    "mock_ai_response": {
+      "groups": [
+        {
+          "title": "Responsive navigation",
+          "explanation": "Likely a more compact design; compare screenshots to verify the visual impact.",
+          "commits": ["0000000000000000000000000000000000000001"],
+          "likely_ui_milestone": true
+        }
+      ]
+    },
+    "expected_valid": false
+  },
+  {
+    "contract": "commit_grouping",
+    "name": "UI milestone without screenshot recommendation is rejected",
+    "history": ["0000000000000000000000000000000000000001"],
+    "commit_details": {
+      "0000000000000000000000000000000000000001": {
+        "message": "Add responsive navigation",
+        "changed_website_files": ["styles.css"]
+      }
+    },
+    "mock_ai_response": {
+      "groups": [
+        {
+          "title": "Responsive navigation",
+          "explanation": "Add responsive navigation changes styles.css and likely makes the header fit smaller screens.",
+          "commits": ["0000000000000000000000000000000000000001"],
+          "likely_ui_milestone": true
+        }
+      ]
+    },
+    "expected_valid": false
+  }
+]

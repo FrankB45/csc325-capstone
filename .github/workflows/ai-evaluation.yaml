@@ -1,0 +1,25 @@
+name: AI Response Evaluation
+
+on:
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    timeout-minutes: 3
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Run mocked AI evaluation
+        working-directory: backend
+        run: python -m evals.run
