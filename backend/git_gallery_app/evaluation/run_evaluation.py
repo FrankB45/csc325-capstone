@@ -23,7 +23,7 @@ from llm_adapter import build_adapter
 from test_consistency import evaluate_consistency_suite
 from test_hallucination import (
     TASK_ID,
-    _shape_failures,
+    response_failures,
     evaluate_hallucination_suite,
 )
 
@@ -97,7 +97,7 @@ def load_golden_set(path: Path = GOLDEN_SET_PATH) -> list[dict]:
             )
         if not isinstance(case["expected_output"], dict):
             raise ValueError(f"Golden case {case['id']} expected_output must be an object.")
-        shape_errors = _shape_failures(case, case["expected_output"])
+        shape_errors = response_failures(case, case["expected_output"])
         if shape_errors:
             raise ValueError(
                 f"Golden case {case['id']} has invalid expected_output: "

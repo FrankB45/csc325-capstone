@@ -56,14 +56,14 @@ class EvaluationLogicTests(unittest.TestCase):
         response = copy.deepcopy(case["expected_output"])
         response["before_commit_sha"] = case["repository_data"]["before_commit_sha"]
         failures = evaluate_hallucination(case, encode(response))
-        self.assertTrue(any("exactly the changes and limitations" in failure for failure in failures))
+        self.assertIn("before_commit_sha: extra_forbidden", failures)
 
     def test_change_requires_exact_four_fields(self):
         case = self.by_id["compare-header-color"]
         response = copy.deepcopy(case["expected_output"])
         del response["changes"][0]["location"]
         failures = evaluate_hallucination(case, encode(response))
-        self.assertTrue(any("exactly element, location, file_path, and description" in failure for failure in failures))
+        self.assertIn("changes.0.location: missing", failures)
 
     def test_supported_file_path_passes(self):
         case = self.by_id["compare-header-color"]
