@@ -22,7 +22,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY","").strip()  # Load the LLM API key 
 OPENAI_MODEL = os.getenv("OPENAI_MODEL","").strip()  # Load the LLM model from environment variables
 SYSTEM_PROMPT_PATH = os.getenv(
     "SYSTEM_PROMPT_PATH",
-    "git_gallery_app/prompts/system_prompt_v1.txt",
+    "git_gallery_app/prompts/system_prompt_v2.txt",
 ).strip()
 
 # Quick-start development settings - unsuitable for production

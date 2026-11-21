@@ -11,6 +11,10 @@ from run_evaluation import load_golden_set, load_system_prompt
 from test_consistency import evaluate_consistency
 from test_hallucination import evaluate_hallucination
 
+from unittest.mock import patch
+
+from django.conf import settings
+
 
 def encode(output: dict) -> str:
     return json.dumps(output)
@@ -26,8 +30,15 @@ class EvaluationLogicTests(unittest.TestCase):
         self.assertGreaterEqual(len(self.cases), 15)
         self.assertEqual({case["task"]["id"] for case in self.cases}, {"compare_commits"})
 
+    @patch.object(
+        settings,
+        "SYSTEM_PROMPT_PATH",
+        "git_gallery_app/prompts/system_prompt_v2.txt",
+    )
     def test_prompt_is_loaded(self):
-        prompt = load_system_prompt()
+        prompt, version = load_system_prompt()
+
+        self.assertEqual(version, "system_prompt_v2")
         self.assertIn("exactly one JSON object", prompt)
         self.assertIn("file_path", prompt)
 
