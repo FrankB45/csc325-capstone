@@ -1,7 +1,19 @@
 # Add API routes here. They are served under /api/.
 
 from django.urls import path
-from .views import hello_world, get_repository, check_repository_compatibility, get_commits, create_analysis, get_project, get_capture_image, get_projects
+from .views import ( 
+    hello_world, 
+    get_repository, 
+    check_repository_compatibility, 
+    get_commits, 
+    create_analysis, 
+    get_project, 
+    get_capture_image, 
+    get_projects,
+    create_comparison,
+    get_comparison,
+    retry_comparison_view, 
+    )
 
 urlpatterns = [
     path("hello/", hello_world, name="hello-world"),
@@ -20,4 +32,19 @@ urlpatterns = [
         name="check-repository-compatibility",
     ),
     path("projects/", get_projects, name="get-projects"),
+        path(
+        "jobs/<str:job_id>/comparisons/",
+        create_comparison,
+        name="create-comparison",
+    ),
+    path(
+        "comparisons/<str:comparison_id>/",
+        get_comparison,
+        name="get-comparison",
+    ),
+    path(
+        "comparisons/<str:comparison_id>/retry/",
+        retry_comparison_view,
+        name="retry-comparison",
+    ),
 ]

@@ -2,8 +2,8 @@ import signal
 
 from django.core.management.base import BaseCommand
 
-from ...services.jobs import recover_stale_jobs
-from ...services.worker_loop import POLL_SECONDS, run_worker, work_once
+from ...services.comparison_worker import process_next_comparison
+from ...services.worker_loop import POLL_SECONDS, run_worker, work_once, recover_work
 
 
 def _stop_on_sigterm(signum, frame):
@@ -29,9 +29,9 @@ class Command(BaseCommand):
         signal.signal(signal.SIGTERM, _stop_on_sigterm)
         try:
             if once:
-                recover_stale_jobs()
-                did_work = work_once()
-                self.stdout.write("Processed one job." if did_work else "No queued jobs.")
+                recover_work()
+                did_work = work_once() or process_next_comparison()
+                self.stdout.write("Processed one item." if did_work else "No queued work.")
             else:
                 run_worker(poll_seconds)
         except KeyboardInterrupt:

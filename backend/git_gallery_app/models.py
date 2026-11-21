@@ -145,3 +145,71 @@ class Job(models.Model):
             models.Index(fields=["status", "created_at"]),
         ]
 
+
+class Comparison(models.Model):
+    class Status(models.TextChoices):
+        QUEUED = "queued", "Queued"
+        PROCESSING = "processing", "Processing"
+        COMPLETE = "complete", "Complete"
+        FAILED = "failed", "Failed"
+
+    class Source(models.TextChoices):
+        LLM = "llm", "LLM"
+        FALLBACK = "fallback", "Fallback"
+
+    capture_job = models.ForeignKey(
+        Job,
+        on_delete=models.CASCADE,
+        related_name="comparisons",
+    )
+
+    before_position = models.PositiveSmallIntegerField()
+    after_position = models.PositiveSmallIntegerField()
+
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.QUEUED,
+    )
+
+    result = models.JSONField(null=True, blank=True)
+
+    result_source = models.CharField(
+        max_length=20,
+        choices=Source.choices,
+        null=True,
+        blank=True,
+    )
+
+    model_name = models.CharField(max_length=255, default="", blank=True)
+    prompt_version = models.CharField(max_length=64, default="", blank=True)
+
+    error_code = models.CharField(max_length=64, default="", blank=True)
+    error_message = models.TextField(default="", blank=True)
+
+    # Preserve the LLM failure if a future fallback produces a usable result.
+    llm_error = models.JSONField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    attempts = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        db_table = "comparisons"
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=[
+                    "capture_job",
+                    "before_position",
+                    "after_position",
+                ],
+                name="unique_comparison_pair",
+            ),
+        ]
+
+        indexes = [
+            models.Index(fields=["status", "created_at"]),
+        ]

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-
+from .models import Comparison
 
 class CreateAnalysisSerializer(serializers.Serializer):
     url = serializers.URLField(max_length=500)
@@ -35,3 +35,40 @@ class CreateAnalysisSerializer(serializers.Serializer):
                 "project_id": "Include the existing project being updated.",
             })
         return attrs
+class CreateComparisonSerializer(serializers.Serializer):
+    first_position = serializers.IntegerField(min_value=0, max_value=9)
+    second_position = serializers.IntegerField(min_value=0, max_value=9)
+
+    def validate(self, attrs):
+        if attrs["first_position"] == attrs["second_position"]:
+            raise serializers.ValidationError(
+                "Choose two different screenshots."
+            )
+        return attrs
+
+
+class ComparisonSerializer(serializers.ModelSerializer):
+    id = serializers.CharField(read_only=True)
+    capture_job_id = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = Comparison
+        fields = (
+            "id",
+            "capture_job_id",
+            "before_position",
+            "after_position",
+            "status",
+            "result",
+            "result_source",
+            "model_name",
+            "prompt_version",
+            "error_code",
+            "error_message",
+            "llm_error",
+            "attempts",
+            "created_at",
+            "started_at",
+            "completed_at",
+        )
+        read_only_fields = fields

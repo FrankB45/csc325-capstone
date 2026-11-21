@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useProject } from "../hooks/useProject.js";
 import { Link, useParams } from "react-router-dom";
 import PageLayout from "../components/PageLayout/PageLayout.jsx";
@@ -25,6 +25,7 @@ import {
   isUpdateInProgress,
 } from "../utils/updateAttempt.js";
 import styles from "./ProjectTimeline.module.css";
+import Toolbox from "../components/Toolbox/Toolbox.jsx";
 
 const FULL_SCREENSHOT_VIEW_WIDTH = 1100;
 const COMPARISON_PANEL_WIDTH = 760;
@@ -353,9 +354,13 @@ const ProjectTimelineView = ({
 }) => {
   const analysis = project.analysis;
   const availablePages = analysis?.available_pages ?? [analysis?.page_path].filter(Boolean);
-  const [selectedPage, setSelectedPage] = useState(
-    analysis?.page_path || analysis?.default_page || availablePages[0] || "",
-  );
+  const [requestedPage, setSelectedPage] = useState(
+  analysis?.page_path || analysis?.default_page || availablePages[0] || "",
+);
+const selectedPage =
+  availablePages.length > 0 && !availablePages.includes(requestedPage)
+    ? availablePages[0]
+    : requestedPage;
   const [mode, setMode] = useState("standard"); // "standard" | "compare"
   const [picks, setPicks] = useState(() => {
     const latestCaptured = commits.filter((commit) => commit.image).at(-1);
@@ -581,8 +586,7 @@ const ProjectTimelineView = ({
     }
   }
 
-  // TODO: call the backend AI endpoint.
-  const handleAsk = async () => "The AI Assistant isn’t connected to the backend yet.";
+
 
   if (updateReview) {
     return (
@@ -740,10 +744,11 @@ const ProjectTimelineView = ({
           />
         </div>
 
-        <div ref={modeRowRef} className={styles.modeRow} data-export-ignore>
-          <ModeToggle value={mode} onChange={handleModeChange} />
-        </div>
-
+        {commits.length > 1 && (
+          <div ref={modeRowRef} className={styles.modeRow} data-export-ignore>
+            <ModeToggle value={mode} onChange={handleModeChange} />
+          </div>
+        )}
         {overlayCommit && <CommitOverlay commit={overlayCommit} onClose={() => setOverlayCommit(null)} />}
         {downloadDialogOpen && (
           <Modal title="Download PNG" onClose={closeDownloadDialog}>
@@ -798,7 +803,12 @@ const ProjectTimelineView = ({
             </section>
           </Modal>
         )}
-        <AIAssistant onAsk={handleAsk} />
+        <Toolbox
+          jobId={analysis.job_id}
+          pagePath={analysis.page_path}
+          mode={mode}
+          commits={compareSlotCommits}
+        />
       </div>
     </PageLayout>
   );
