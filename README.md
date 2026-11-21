@@ -20,7 +20,7 @@
 
 ## CI/CD Pipeline
 
-Our GitHub Actions workflow is defined in
+The backend CI workflow is defined in
 `.github/workflows/git-gallery-cicd.yaml`. It runs when a pull request
 targets `main` and when commits are pushed to `main`.
 
@@ -34,6 +34,14 @@ The `backend-tests` job:
 
 The job has a 10-minute timeout, caches Python dependencies, and uses
 read-only repository permissions.
+
+The separate `.github/workflows/ai-evaluation.yaml` workflow runs on pull
+requests targeting `main`. It evaluates mocked AI commit recommendations
+against the existing commit-selection contract and requires a 100% pass
+rate. Its responses are local fixtures; the evaluation and unit tests do
+not call an AI provider. This is a deterministic contract check, not a
+measure of live model quality; the project does not yet include an AI
+integration.
 
 A separate `deploy` job depends on successful backend tests. Currently,
 it prints a deployment message as a placeholder; automated deployment
@@ -134,7 +142,7 @@ Unit tests will check individual functions in isolation, using mocked GitHub and
 - **AI response validation:** Verify that AI responses follow the expected structure, reference only valid commits and screenshots, and handle missing, malformed, or incomplete responses correctly.
   
 
-Unit tests will run during development and before merging changes. Each test will compare the actual result with a defined expected result.
+Unit tests will run during development and before merging changes. Each test will compare the actual result with a defined expected result. AI response tests use local mocked responses and must not call a live AI API.
 
 ### 2. Integration and End-to-End Testing
 
