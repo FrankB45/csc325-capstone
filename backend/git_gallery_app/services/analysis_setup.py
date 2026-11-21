@@ -1,7 +1,9 @@
+from bson import ObjectId
+from bson.errors import InvalidId
 from django.utils.dateparse import parse_datetime
 
 from ..commit_selection import validate_selection
-from ..models import Commit, Project, RepositorySnapshot
+from ..models import Commit, Job, Project, RepositorySnapshot
 from .dependencies import check_repository_dependencies
 from .github import (
     _list_html_page_paths,
@@ -11,6 +13,7 @@ from .github import (
     parse_github_url,
 )
 from .jobs import create_job
+from .projects import select_project_jobs
 
 
 class AnalysisSetupError(ValueError):
@@ -19,7 +22,47 @@ class AnalysisSetupError(ValueError):
         self.status_code = status_code
 
 
-def start_analysis(url, page_path, commit_shas, name=""):
+def _get_update_project(project_id, source_job_id):
+    try:
+        project_key = ObjectId(project_id)
+        source_job_key = ObjectId(source_job_id)
+    except (InvalidId, TypeError):
+        raise AnalysisSetupError("The project or saved analysis ID is invalid.")
+
+    try:
+        project = Project.objects.get(pk=project_key)
+    except Project.DoesNotExist:
+        raise AnalysisSetupError("Project not found.", status_code=404)
+
+    jobs = list(
+        Job.objects.filter(repo_snapshot__project=project)
+        .order_by("-created_at", "-pk")
+    )
+    active_job, _ = select_project_jobs(jobs)
+    if active_job is None or active_job.pk != source_job_key:
+        raise AnalysisSetupError(
+            "The saved analysis has changed. Reload the project before updating it.",
+            status_code=409,
+        )
+    if any(job.status in (Job.Status.QUEUED, Job.Status.PROCESSING) for job in jobs):
+        raise AnalysisSetupError(
+            "This project is already being processed. Wait for it to finish before updating.",
+            status_code=409,
+        )
+    return project
+
+
+def start_analysis(
+    url, page_path, commit_shas, name="", project_id=None, source_job_id=None,
+):
+    if (project_id is None) != (source_job_id is None):
+        raise AnalysisSetupError("Include both the project ID and saved analysis ID for an update.")
+
+    project = None
+    if project_id is not None:
+        project = _get_update_project(project_id, source_job_id)
+        url = project.repository_url
+
     repository = get_repository_information(url)
     url = repository["url"]
     owner, repo = parse_github_url(url)
@@ -80,11 +123,12 @@ def start_analysis(url, page_path, commit_shas, name=""):
     for commit in commits:
         commit.full_clean()
 
-    project = Project(
-        name=name or repository["name"],
-        repository_url=url,
-    )
-    project.full_clean()
+    if project is None:
+        project = Project(
+            name=name or repository["name"],
+            repository_url=url,
+        )
+        project.full_clean()
 
     snapshot = RepositorySnapshot(
         project=project,
@@ -97,7 +141,11 @@ def start_analysis(url, page_path, commit_shas, name=""):
     )
     snapshot.full_clean(exclude=["project"])
 
-    project.save()
+    if project_id is None:
+        project.save()
+    else:
+        # Recheck after GitHub requests. This is not an atomic reservation.
+        project = _get_update_project(project_id, source_job_id)
 
     # Assign the relationship now that the project has an ID.
     snapshot.project = project

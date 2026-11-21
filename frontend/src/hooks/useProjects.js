@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { isUpdateInProgress } from "../utils/updateAttempt.js";
 
 export function useProjects() {
   const [state, setState] = useState({
@@ -59,9 +60,13 @@ export function useProjects() {
           error: "",
         });
 
+        // A card's own status describes the displayed analysis, so also watch
+        // for a newer update that is still being processed.
         if (
-          projects.some((project) =>
-            ["queued", "processing"].includes(project.status)
+          projects.some(
+            (project) =>
+              ["queued", "processing"].includes(project.status) ||
+              isUpdateInProgress(project.update_attempt)
           )
         ) {
           timer = setTimeout(loadProjects, 2000);

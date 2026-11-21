@@ -1,12 +1,16 @@
 import styles from "./SyncButton.module.css";
 
-/** Coral "Sync Updates" button; the icon spins while `syncing`. */
-const SyncButton = ({ syncing = false, onClick, children = "Sync Updates" }) => (
+/**
+ * Coral "Sync Updates" button; the icon spins while `syncing` (work is in progress).
+ * `paused` also disables the button, but without spinning or marking it busy,
+ * for when nothing is loading and the user should wait or check first.
+ */
+const SyncButton = ({ syncing = false, paused = false, onClick, children = "Sync Updates" }) => (
   <button
     type="button"
     className={styles.button}
     onClick={onClick}
-    disabled={syncing}
+    disabled={syncing || paused}
     aria-busy={syncing || undefined}
   >
     {children}

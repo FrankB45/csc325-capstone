@@ -5,6 +5,59 @@ from django.conf import settings
 import shutil
 
 
+def select_project_jobs(jobs):
+    """Return the active job and latest update; jobs must be ordered newest first."""
+    if not jobs:
+        return None, None
+
+    # Keep the original analysis, even if it failed, until an update fully succeeds.
+    active_job = jobs[-1]
+    for job in jobs:
+        if job.status != Job.Status.COMPLETE or not job.captures:
+            continue
+        if all(
+            capture.status == Capture.Status.COMPLETE and capture.screenshot_path
+            for capture in job.captures
+        ):
+            active_job = job
+            break
+
+    latest_update = jobs[0] if len(jobs) > 1 else None
+    return active_job, latest_update
+
+
+def _update_attempt_summary(job):
+    if job is None:
+        return None
+
+    succeeded = sum(capture.status == Capture.Status.COMPLETE for capture in job.captures)
+    failed = sum(capture.status == Capture.Status.FAILED for capture in job.captures)
+    return {
+        "job_id": str(job.pk),
+        "snapshot_id": str(job.repo_snapshot_id),
+        "page_path": job.page_path,
+        "status": job.status,
+        "error_message": job.error_message,
+        "created_at": job.created_at,
+        "completed_at": job.completed_at,
+        "progress": {
+            "total": len(job.captures),
+            "processed": succeeded + failed,
+            "succeeded": succeeded,
+            "failed": failed,
+        },
+        "captures": [
+            {
+                "commit_sha": capture.commit_sha,
+                "position": capture.position,
+                "status": capture.status,
+                "error_message": capture.error_message,
+            }
+            for capture in sorted(job.captures, key=lambda item: item.position)
+        ],
+    }
+
+
 def get_project_details(project):
     result = {
         "id": str(project.pk),
@@ -12,14 +65,16 @@ def get_project_details(project):
         "repository_url": project.repository_url,
         "created_at": project.created_at,
         "analysis": None,
+        "update_attempt": None,
     }
 
-    job = (
+    jobs = list(
         Job.objects
         .filter(repo_snapshot__project=project)
         .order_by("-created_at", "-pk")
-        .first()
     )
+    job, latest_update = select_project_jobs(jobs)
+    result["update_attempt"] = _update_attempt_summary(latest_update)
 
     if job is None:
         return result
@@ -107,15 +162,18 @@ def get_project_summaries():
         repo_snapshot_id__in=list(snapshot_projects)
     ).order_by("-created_at", "-pk")
 
-    latest_jobs = {}
+    project_jobs = {}
     for job in jobs:
         project_id = snapshot_projects[job.repo_snapshot_id]
-        latest_jobs.setdefault(project_id, job)
+        project_jobs.setdefault(project_id, []).append(job)
 
-    return [
-        _project_summary(project, latest_jobs.get(project.pk))
-        for project in projects
-    ]
+    summaries = []
+    for project in projects:
+        active_job, latest_update = select_project_jobs(project_jobs.get(project.pk, []))
+        summary = _project_summary(project, active_job)
+        summary["update_attempt"] = _update_attempt_summary(latest_update)
+        summaries.append(summary)
+    return summaries
 
 
 def _project_summary(project, job):

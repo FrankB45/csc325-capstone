@@ -7,56 +7,58 @@ import Spinner from "../components/Spinner/Spinner.jsx";
 import CommitPicker from "../components/CommitPicker/CommitPicker.jsx";
 import { useRepositoryLookup } from "../hooks/useRepositoryLookup.js";
 import { MIN_COMMITS, MAX_COMMITS } from "../utils/commits.js";
+import {
+  findNewUpdateAttempt,
+  isValidUpdateReview,
+  NO_NEW_UPDATE_MESSAGE,
+  postJSON,
+  prepareProjectSetup,
+  submitProjectUpdate,
+} from "../utils/projectSetup.js";
 import styles from "./NewProject.module.css";
 import watermark from "../assets/octocat-watermark.svg";
 
-async function postJSON(path, body, signal) {
-  const response = await fetch(path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    signal,
-  });
+const UNKNOWN_OUTCOME_MESSAGE =
+  "We couldn't confirm whether the update was started. Your current results are unchanged. " +
+  "Submitting again now could start a second update.";
 
-  const data = await response.json();
-
-  if (!response.ok) {
-    const message = data.error || data.detail || data.reason;
-    const fields = Object.entries(data)
-      .map(([field, errors]) =>
-        field + ": " + (Array.isArray(errors) ? errors.join(" ") : JSON.stringify(errors))
-      )
-      .join(" ");
-
-    throw new Error(
-      (Array.isArray(message) ? message.join(" ") : message) ||
-      fields ||
-      "The request failed. Please try again."
-    );
-  }
-
-  return data;
-}
-
-const NewProject = () => {
+const NewProject = (props) => {
+  const {
+    updateReview,
+    onCancelReview,
+    onUpdateAccepted,
+    onUpdateUnconfirmed,
+    onReturnToProject,
+  } = props;
+  // Even an invalid explicit review prop must never fall back to project creation.
+  const isUpdateReview = "updateReview" in props || "onCancelReview" in props;
+  const review = isValidUpdateReview(updateReview) ? updateReview : null;
   const navigate = useNavigate();
   const urlId = useId();
   const titleId = useId();
   const errorId = useId();
   const pageId = useId();
+  const reviewNoticeId = useId();
 
   const requestRef = useRef(null);
 
   const { repository, error: lookupError, lookup, reset } = useRepositoryLookup();
-  const [step, setStep] = useState("url"); // "url" | "setup" | "creating"
+  const [step, setStep] = useState(review ? "setup" : "url"); // "url" | "setup" | "creating"
   const [url, setUrl] = useState("");
-  const [title, setTitle] = useState("");
-  const [pages, setPages] = useState([]);
-  const [pagePath, setPagePath] = useState("");
-  const [commits, setCommits] = useState([]);
-  const [selectedIds, setSelectedIds] = useState([]);
+  const [title, setTitle] = useState(review?.projectTitle || "");
+  const [pages, setPages] = useState(() => review ? [...review.pages] : []);
+  const [pagePath, setPagePath] = useState(review?.pagePath || "");
+  const [commits, setCommits] = useState(() => review ? [...review.commits] : []);
+  const [selectedIds, setSelectedIds] = useState(() => review ? [...review.selectedIds] : []);
   const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState("");
+  // Update review only: "reviewing" | "saving" | "unconfirmed" | "checking".
+  // "unconfirmed" means the update request may or may not have reached the server.
+  const [updateState, setUpdateState] = useState("reviewing");
+  const [hasSentUpdate, setHasSentUpdate] = useState(false);
+  const isSaving = updateState === "saving";
+  const isUnconfirmed = updateState === "unconfirmed" || updateState === "checking";
+  const isLocked = isSaving || isUnconfirmed;
 
   useEffect(() => () => requestRef.current?.abort(), []);
 
@@ -70,7 +72,7 @@ const NewProject = () => {
 
   async function handleUrlSubmit(event) {
     event.preventDefault();
-    if (requestRef.current) return;
+    if (isUpdateReview || requestRef.current) return;
 
     const controller = new AbortController();
     requestRef.current = controller;
@@ -81,54 +83,15 @@ const NewProject = () => {
       const repo = await lookup(url);
       if (!repo || controller.signal.aborted) return;
 
-      const report = await postJSON(
-        "/api/repo/compatibility/",
-        { url: repo.url },
-        controller.signal
-      );
-
-      if (!report.setup_available) {
-        const checks = [
-          [report.history?.history_status, report.history?.reason],
-          [report.html?.html_status, report.html?.reason],
-          [report.dependencies?.status, report.dependencies?.reason],
-        ];
-        const problem = checks.find(([status]) => status !== "passed");
-
-        throw new Error(
-          problem?.[1] || report.reason || "This repository is not supported."
-        );
-      }
-
-      const history = await postJSON(
-        "/api/repo/commits/",
-        { url: repo.url },
-        controller.signal
-      );
+      const setup = await prepareProjectSetup(repo.url, controller.signal);
 
       if (controller.signal.aborted) return;
 
-      const availablePages = report.html.html_pages;
-
-      if (!availablePages.length || !history.commits.length) {
-        throw new Error("No pages or commits are available for capture.");
-      }
-
       setTitle(repo.name);
-      setPages(availablePages);
-      setPagePath(
-        availablePages.find((path) => path.toLowerCase() === "index.html") ||
-        availablePages[0]
-      );
-
-      setCommits(
-        history.commits.map((commit) => ({
-          ...commit,
-          id: commit.sha,
-        }))
-      );
-
-      setSelectedIds(history.preselected);
+      setPages(setup.pages);
+      setPagePath(setup.pagePath);
+      setCommits(setup.commits);
+      setSelectedIds(setup.selectedIds);
       setStep("setup");
     } catch (err) {
       if (!controller.signal.aborted) {
@@ -142,6 +105,7 @@ const NewProject = () => {
 
   async function handleSetupSubmit(event) {
     event.preventDefault();
+    if (isUpdateReview) return;
     if (!canSubmit || requestRef.current) return;
 
     const controller = new AbortController();
@@ -172,6 +136,95 @@ const NewProject = () => {
     } finally {
       if (requestRef.current === controller) requestRef.current = null;
     }
+  }
+
+  // Save update is the confirmation. The request is sent once and never retried automatically.
+  async function handleReviewSubmit(event) {
+    event.preventDefault();
+    if (updateState !== "reviewing" || requestRef.current || !canSubmit) return;
+
+    const controller = new AbortController();
+    requestRef.current = controller;
+    setError("");
+    setHasSentUpdate(true);
+    setUpdateState("saving");
+
+    try {
+      const result = await submitProjectUpdate(
+        { ...review, pagePath, selectedIds },
+        controller.signal
+      );
+      if (controller.signal.aborted || requestRef.current !== controller) return;
+
+      onUpdateAccepted(result.jobId);
+    } catch (err) {
+      if (controller.signal.aborted || requestRef.current !== controller) return;
+
+      if (err.outcomeUnknown === false) {
+        // The server clearly refused the update, so nothing was started.
+        setError(err.message || "The update could not be started.");
+        setUpdateState("reviewing");
+      } else {
+        setError(UNKNOWN_OUTCOME_MESSAGE);
+        setUpdateState("unconfirmed");
+        onUpdateUnconfirmed();
+      }
+    } finally {
+      if (requestRef.current === controller) requestRef.current = null;
+    }
+  }
+
+  // Reads the project once. A new update attempt means the earlier request did arrive.
+  async function handleCheckAgain() {
+    if (updateState !== "unconfirmed" || requestRef.current) return;
+
+    const controller = new AbortController();
+    requestRef.current = controller;
+    setUpdateState("checking");
+
+    try {
+      const attempt = await findNewUpdateAttempt(
+        review.sourceProjectId,
+        review.sourceAttemptJobId,
+        controller.signal
+      );
+      if (controller.signal.aborted || requestRef.current !== controller) return;
+
+      if (attempt) {
+        onUpdateAccepted(attempt.job_id);
+      } else {
+        setError(NO_NEW_UPDATE_MESSAGE);
+        setUpdateState("unconfirmed");
+      }
+    } catch (err) {
+      if (controller.signal.aborted || requestRef.current !== controller) return;
+
+      setError(err.message || "Could not check the project. Please try again.");
+      setUpdateState("unconfirmed");
+    } finally {
+      if (requestRef.current === controller) requestRef.current = null;
+    }
+  }
+
+  const hasReviewCallbacks = [
+    onCancelReview,
+    onUpdateAccepted,
+    onUpdateUnconfirmed,
+    onReturnToProject,
+  ].every((callback) => typeof callback === "function");
+
+  if (isUpdateReview && (!review || !hasReviewCallbacks)) {
+    return (
+      <PageLayout width="narrow" watermark>
+        <h1 className={styles.title}>Review update</h1>
+        <p role="alert" className={styles.error}>
+          Update review could not be opened. Return to the project and check again.
+        </p>
+        {typeof onCancelReview === "function"
+          ? <CancelButton onClick={onCancelReview} />
+          : <CancelButton to="/gallery">Back to Gallery</CancelButton>}
+      </PageLayout>
+    );
   }
 
   if (step === "creating") {
@@ -218,20 +271,22 @@ const NewProject = () => {
   if (step === "setup") {
     return (
       <PageLayout width="narrow" watermark>
-        <h1 className={styles.title}>New Project</h1>
-        <form className={styles.form} onSubmit={handleSetupSubmit}>
+        <h1 className={styles.title}>{isUpdateReview ? "Review update" : "New Project"}</h1>
+        <form className={styles.form} onSubmit={isUpdateReview ? handleReviewSubmit : handleSetupSubmit}>
           <div className={styles.field}>
             <label className={styles.label} htmlFor={urlId}>GitHub Repository URL</label>
             <input
               id={urlId}
               className={styles.input}
-              value={repository.url}
+              value={isUpdateReview ? review.repositoryUrl : repository.url}
               readOnly
             />
 
-            <CancelButton onClick={changeUrl}>
-              Change repository
-            </CancelButton>
+            {!isUpdateReview && (
+              <CancelButton onClick={changeUrl}>
+                Change repository
+              </CancelButton>
+            )}
 
           </div>
 
@@ -242,6 +297,7 @@ const NewProject = () => {
               className={styles.input}
               value={title}
               onChange={(event) => setTitle(event.target.value)}
+              readOnly={isUpdateReview}
               maxLength={200}
               required
             />
@@ -257,6 +313,7 @@ const NewProject = () => {
               className={styles.input}
               value={pagePath}
               onChange={(event) => setPagePath(event.target.value)}
+              disabled={isLocked}
               required
             >
               {pages.map((path) => (
@@ -267,12 +324,24 @@ const NewProject = () => {
             </select>
           </div>
 
-          <p>Screenshots will appear after you create the project.</p>
+          {isUpdateReview ? (
+            <p id={reviewNoticeId}>
+              Saving starts a new analysis of the selected commits. Your current results stay visible until it succeeds.
+            </p>
+          ) : <p>Screenshots will appear after you create the project.</p>}
 
+          {isSaving && (
+            <p role="status">
+              Starting update… Leaving this page stops waiting for the reply, but it does not
+              cancel an update the server has already accepted.
+            </p>
+          )}
+
+          {/* While saving or unconfirmed the selection is locked, so it matches what was sent. */}
           <CommitPicker
             commits={commits}
             selectedIds={selectedIds}
-            onChange={setSelectedIds}
+            onChange={(ids) => { if (!isLocked) setSelectedIds(ids); }}
           />
 
           {displayedError && (
@@ -282,11 +351,41 @@ const NewProject = () => {
           )}
 
           <div className={styles.actions}>
-            <NextButton disabled={!canSubmit}>
-              Create project
-            </NextButton>
-
-            <CancelButton to="/" />
+            {isUpdateReview ? (
+              <>
+                {isUnconfirmed ? (
+                  <NextButton
+                    type="button"
+                    loading={updateState === "checking"}
+                    loadingLabel="Checking for the update"
+                    onClick={handleCheckAgain}
+                  >
+                    Check again
+                  </NextButton>
+                ) : (
+                  <NextButton
+                    loading={isSaving}
+                    loadingLabel="Saving update"
+                    disabled={!canSubmit}
+                    aria-describedby={reviewNoticeId}
+                  >
+                    Save update
+                  </NextButton>
+                )}
+                {/* After a request was sent, leaving also reloads the project's current state. */}
+                <CancelButton
+                  disabled={isSaving}
+                  onClick={hasSentUpdate ? onReturnToProject : onCancelReview}
+                >
+                  {isUnconfirmed ? "Back to project" : "Cancel"}
+                </CancelButton>
+              </>
+            ) : (
+              <>
+                <NextButton disabled={!canSubmit}>Create project</NextButton>
+                <CancelButton to="/" />
+              </>
+            )}
           </div>
         </form>
       </PageLayout>

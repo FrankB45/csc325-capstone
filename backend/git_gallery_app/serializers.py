@@ -22,6 +22,19 @@ class CreateAnalysisSerializer(serializers.Serializer):
         trim_whitespace=True,
     )
 
+    project_id = serializers.RegexField(r"\A[0-9a-fA-F]{24}\Z", required=False)
+    source_job_id = serializers.RegexField(r"\A[0-9a-fA-F]{24}\Z", required=False)
+
+    def validate(self, attrs):
+        if "project_id" in attrs and "source_job_id" not in attrs:
+            raise serializers.ValidationError({
+                "source_job_id": "Include the saved analysis being updated.",
+            })
+        if "source_job_id" in attrs and "project_id" not in attrs:
+            raise serializers.ValidationError({
+                "project_id": "Include the existing project being updated.",
+            })
+        return attrs
 class CreateComparisonSerializer(serializers.Serializer):
     first_position = serializers.IntegerField(min_value=0, max_value=9)
     second_position = serializers.IntegerField(min_value=0, max_value=9)
