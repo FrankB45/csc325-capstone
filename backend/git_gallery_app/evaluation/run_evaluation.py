@@ -6,7 +6,18 @@ import argparse
 import json
 import math
 import sys
+import os
+
 from pathlib import Path
+
+# Support running this file directly from the command line.
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+
+from git_gallery_app.services.llm import ComparisonRequestError, load_system_prompt
 
 from llm_adapter import build_adapter
 from test_consistency import evaluate_consistency_suite
@@ -19,7 +30,6 @@ from test_hallucination import (
 
 HERE = Path(__file__).resolve().parent
 GOLDEN_SET_PATH = HERE / "golden_set.json"
-SYSTEM_PROMPT_PATH = HERE.parent / "prompts" / "system_prompt.txt"
 HALLUCINATION_THRESHOLD = 0.90
 CONSISTENCY_THRESHOLD = 0.80
 
@@ -96,19 +106,10 @@ def load_golden_set(path: Path = GOLDEN_SET_PATH) -> list[dict]:
     return cases
 
 
-def load_system_prompt(path: Path = SYSTEM_PROMPT_PATH) -> str:
-    try:
-        prompt = path.read_text(encoding="utf-8").strip()
-    except OSError as error:
-        raise ValueError(f"Could not load system prompt at {path}: {error}") from error
-    if not prompt:
-        raise ValueError("System prompt is empty.")
-    return prompt
-
-
 def run_evaluation(mode: str = "mock") -> tuple[int, int, int]:
     cases = load_golden_set()
-    system_prompt = load_system_prompt()
+    system_prompt, prompt_version = load_system_prompt()
+    print(f"Loaded system prompt version: {prompt_version}") # Good for visibility in the pipeline
     adapter = build_adapter(mode)
 
     repeated_responses = {}
@@ -185,7 +186,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     try:
         exit_code, _, _ = run_evaluation(args.mode)
-    except (OSError, ValueError, RuntimeError) as error:
+    except (ComparisonRequestError, OSError, ValueError, RuntimeError) as error:
         print(f"Evaluation could not run: {error}", file=sys.stderr)
         return 2
     return exit_code

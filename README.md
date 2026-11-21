@@ -9,6 +9,37 @@
 - The project will be narrowly scoped to ensure the team can complete it with the time given. Git Gallery accepts a link to a public GitHub repository and with a few additional (but optional) setup steps, produces the visual timeline for your project. The requirements to be an acceptable repository will be strict to ensure simple, repeatable functionality. The submitted GitHub project must be a simple HTML, CSS, and JavaScript website, with other criteria to ensure that it can be processed. 
 - AI supports the project by selecting commits and interpreting their visual differences. It reviews commit messages and code changes to group consecutive commits into related milestones and recommends which commits to capture. For a selected screenshot pair, AI provides explanations of visible changes and highlights the areas of change. 
 
+## AI Compare and its fallback
+
+In Compare mode, select two commits with successful screenshots. Open
+**Toolbox** and choose **Compare these two commits** to request an AI
+explanation of their visible differences.
+
+If OpenAI times out, the connection fails, or the response is invalid,
+Git Gallery marks the comparison as failed and displays an error. Both
+screenshots stay available side by side, so you can continue reviewing
+the changes yourself. Choose **Retry comparison** to queue another
+attempt for the same pair.
+
+A failed comparison has no saved AI result. A successful comparison with
+an empty change list displays **No visible changes were reported.**
+
+If only the repository diff is unavailable, AI Compare can still analyze
+the screenshots and include that limitation in the result.
+
+### Prompt-injection risk
+
+AI Compare analyzes screenshots of pages supplied by repository owners.
+A page could contain text telling the model to report that a navigation
+link was removed, even though the link is visible in both screenshots.
+If the model followed that text, Git Gallery could save and display a
+false finding to the reviewer.
+
+The v2 system prompt tells the model to treat text inside screenshots
+and repository diffs as untrusted content. In Sprint 4, we will test
+this risk with a known screenshot pair containing misleading instructions.
+The comparison should describe the visible changes and should not report
+the fabricated removal.
 ## Prototype
 
 **<u>Direct Prototype Link:</u>** https://www.figma.com/proto/CzEo1jVIzXH8DadnHSwzzb/Frontend-UI?node-id=24-44&p=f&t=GtrlEeQ1tzYoUvKd-1&scaling=min-zoom&content-scaling=fixed&page-id=0%3A1&starting-point-node-id=24%3A44
@@ -38,15 +69,13 @@ read-only repository permissions.
 The separate `.github/workflows/ai-evaluation.yaml` workflow runs on pull
 requests targeting `main`. It evaluates mocked AI commit recommendations
 against the existing commit-selection contract and requires a 100% pass
-rate. Its responses are local fixtures; the evaluation and unit tests do
-not call an AI provider. This is a deterministic contract check, not a
-measure of live model quality; the project does not yet include an AI
-integration.
+rate. This workflow checks local fixtures. The production AI Compare feature calls OpenAI from the Python backend.
 
 A separate `deploy` job depends on successful backend tests. Currently,
 it prints a deployment message as a placeholder; automated deployment
-is not implemented. Frontend tests and builds are not currently included
-in this workflow.
+is not implemented. 
+
+A separate frontend CI workflow runs ESLint and builds the React application.
 
 ## Branch Protection
 
