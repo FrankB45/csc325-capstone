@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import re
 
+from pydantic import ValidationError
+
 
 TASK_ID = "compare_commits"
 WORD_PATTERN = re.compile(r"[a-z0-9]+")
@@ -66,37 +68,34 @@ def _supported_file_paths(case: dict) -> set[str]:
     return paths
 
 
-def _shape_failures(case: dict, response: dict) -> list[str]:
+def response_failures(case: dict, response: dict) -> list[str]:
+    from git_gallery_app.comparison_schema import ComparisonResult
+
     if case.get("task", {}).get("id") != TASK_ID:
         return ["unsupported analysis task; only compare_commits is in scope"]
-    if set(response) != {"changes", "limitations"}:
-        return ["response must contain exactly the changes and limitations fields"]
-    if not isinstance(response["changes"], list) or not isinstance(response["limitations"], list):
-        return ["changes and limitations must be arrays"]
-    if not all(isinstance(item, str) for item in response["limitations"]):
-        return ["limitations must contain only strings"]
 
-    for index, change in enumerate(response["changes"]):
-        if not isinstance(change, dict) or set(change) != {
-            "element",
-            "location",
-            "file_path",
-            "description",
-        }:
-            return [f"change {index + 1} must contain exactly element, location, file_path, and description"]
-        for field in ("element", "location", "file_path"):
-            if change[field] is not None and not isinstance(change[field], str):
-                return [f"change {index + 1} field {field} must be a string or null"]
-        if not isinstance(change["description"], str) or not change["description"].strip():
-            return [f"change {index + 1} description must be a nonempty string"]
-    return []
+    try:
+        result = ComparisonResult.model_validate(response)
+    except ValidationError as exc:
+        failures = []
+        for error in exc.errors(include_input=False, include_url=False):
+            field = ".".join(map(str, error["loc"])) or "response"
+            failures.append(f"{field}: {error['type']}")
+        return failures
+
+    # A reported visual change needs a meaningful description.
+    return [
+        f"change {index} must have a nonempty description"
+        for index, change in enumerate(result.changes, start=1)
+        if not change.description.strip()
+    ]
 
 
 def evaluate_hallucination(case: dict, response_text: str) -> list[str]:
     response, errors = parse_response(response_text)
     if errors:
         return errors
-    failures = _shape_failures(case, response)
+    failures = response_failures(case, response)
     if failures:
         return failures
 
@@ -133,7 +132,7 @@ def evaluate_hallucination(case: dict, response_text: str) -> list[str]:
 
 def semantic_signature(case: dict, response_text: str) -> tuple | None:
     response, errors = parse_response(response_text)
-    if errors or _shape_failures(case, response):
+    if errors or response_failures(case, response):
         return None
 
     changes = tuple(sorted(

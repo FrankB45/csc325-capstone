@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from ..comparison_schema import ComparisonResult
 from .llm import request_image_comparison
 
 import logging
@@ -9,28 +9,12 @@ from pathlib import Path
 
 from django.conf import settings
 from django.utils import timezone
-from pydantic import BaseModel, ConfigDict
 
 from ..models import Capture, Comparison
 from .llm import ( ComparisonRequestError, request_image_comparison, load_system_prompt )
 
 logger = logging.getLogger(__name__)
 
-
-class ComparisonChange(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    element: str | None
-    location: str | None
-    file_path: str | None
-    description: str
-
-
-class ComparisonResult(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    changes: list[ComparisonChange]
-    limitations: list[str]
 
 def compare_screenshots(before_path, after_path, system_prompt, *, diff_context = ""):
     # Wrapper for LLM call 
