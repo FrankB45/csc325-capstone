@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 import { useProject } from "../hooks/useProject.js";
 import { Link, useParams } from "react-router-dom";
 import PageLayout from "../components/PageLayout/PageLayout.jsx";
@@ -11,7 +11,6 @@ import Timeline from "../components/Timeline/Timeline.jsx";
 import CommitOverlay from "../components/CommitOverlay/CommitOverlay.jsx";
 import Modal from "../components/Modal/Modal.jsx";
 import SyncButton from "../components/SyncButton/SyncButton.jsx";
-import AIAssistant from "../components/AIAssistant/AIAssistant.jsx";
 import NewProject from "./NewProject.jsx";
 import {
   findNewUpdateAttempt,
@@ -404,12 +403,6 @@ const selectedPage =
       ? describeUnfinishedUpdate(updateAttempt)
       : null;
   const showUpdated = watchedJobId !== null && analysis.job_id === watchedJobId;
-
-  useEffect(() => {
-    if (availablePages.length > 0 && !availablePages.includes(selectedPage)) {
-      setSelectedPage(availablePages[0]);
-    }
-  }, [availablePages, selectedPage]);
 
   // Compare slots stay fixed: 1 is left and 2 is right.
   const shownIds = mode === "standard" ? picks.filter(Boolean).slice(-1) : picks.filter(Boolean);
