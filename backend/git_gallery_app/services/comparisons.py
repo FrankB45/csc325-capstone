@@ -15,6 +15,9 @@ from .llm import ( ComparisonRequestError, request_image_comparison, load_system
 
 logger = logging.getLogger(__name__)
 
+UNVERIFIED_FILE_LIMITATION = (
+    "A file reference could not be verified against the supplied patches."
+)
 
 def compare_screenshots(before_path, after_path, system_prompt, *, diff_context = ""):
     # Wrapper for LLM call 
@@ -25,6 +28,40 @@ def compare_screenshots(before_path, after_path, system_prompt, *, diff_context 
         result_type=ComparisonResult,  
         diff_context=diff_context,
     )
+
+
+def finalize_result(result, context):
+    """Apply the app's cleanup rules to a raw model comparison.
+
+    1. A change's file_path is kept only if that file has a non-empty patch
+       in the diff context (truncated patches still count). Otherwise it is
+       set to None and a limitation note is added.
+    2. The diff context's own limitations are appended after the model's.
+    3. Exact duplicate limitations are removed, keeping first-seen order.
+
+    Returns a new ComparisonResult. Neither argument is modified.
+    """
+    allowed_paths = {
+        item["file_path"]
+        for item in context["files"]
+        if item["patch"]
+    }
+
+    changes = []
+    cleanup_notes = []
+    for change in result.changes:
+        if change.file_path is not None and change.file_path not in allowed_paths:
+            change = change.model_copy(update={"file_path": None})
+            cleanup_notes.append(UNVERIFIED_FILE_LIMITATION)
+        changes.append(change)
+
+    limitations = list(dict.fromkeys([
+        *result.limitations,
+        *context["limitations"],
+        *cleanup_notes,
+    ]))
+
+    return ComparisonResult(changes=changes, limitations=limitations)
 
 def _get_captures(job, before_position, after_position):
     #get all the captures from a job and pull out the before and after
@@ -176,31 +213,13 @@ def process_comparison(comparison_id, *, claimed_attempt=None):
             page_path=comparison.capture_job.page_path,
         )
 
-        result = compare_screenshots(
+        raw_result = compare_screenshots(
             _screenshot_path(before),
             _screenshot_path(after),
             system_prompt,
             diff_context=json.dumps(context, ensure_ascii=False),
         )
-        # We only want to include the files that are html css js
-        allowed_paths = {
-            item["file_path"]
-            for item in context["files"]
-            if item["patch"]
-        }
-
-        for change in result.changes:
-            if change.file_path is not None and change.file_path not in allowed_paths:
-                change.file_path = None
-                context["limitations"].append(
-                    "A file reference could not be verified against the supplied patches."
-                )
-
-        result.limitations = list(dict.fromkeys([
-            *result.limitations,
-            *context["limitations"],
-        ]))
-
+        result = finalize_result(raw_result, context)
         result_data = result.model_dump(mode="json")
 
     except ComparisonRequestError as error:
