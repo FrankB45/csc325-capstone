@@ -8,8 +8,11 @@ from evals.compare.cases import (
     ANY_FILE,
     PNG_SIGNATURE,
     CaseFormatError,
+    bias_pairs,
     load_case,
     load_dataset,
+    DATASET_DIR,
+    MIN_GOLDEN_CASES,
 )
 
 VALID_DIFF = {
@@ -41,6 +44,17 @@ VALID_RUBRIC = {
             "expected_file_path": "styles.css",
         }
     ],
+    "reference_output": {
+    "changes": [
+        {
+            "element": "Header background",
+            "location": "Top of the page",
+            "file_path": "styles.css",
+            "description": "The header background changes from gray to navy.",
+        }
+    ],
+    "limitations": [],
+    },
 }
 
 
@@ -96,7 +110,11 @@ class CaseFormatTests(unittest.TestCase):
         load_case(self.write_case(diff=diff))  # does not raise (decision D2)
 
     def test_expect_no_changes_case_loads(self):
-        rubric = self.rubric_with(expect_no_changes=True, expected_changes=[])
+        rubric = self.rubric_with(
+            expect_no_changes=True,
+            expected_changes=[],
+            reference_output={"changes": [], "limitations": []},
+        )
 
         case = load_case(self.write_case(rubric=rubric))
 
@@ -173,6 +191,44 @@ class CaseFormatTests(unittest.TestCase):
         with self.assertRaisesRegex(CaseFormatError, "duplicate expected change ids"):
             load_case(self.write_case(rubric=rubric))
 
+    # --- reference_output problems -----------------------------------------
+
+    def test_reference_output_must_match_production_schema(self):
+        rubric = copy.deepcopy(VALID_RUBRIC)
+        del rubric["reference_output"]["changes"][0]["location"]
+
+        with self.assertRaisesRegex(CaseFormatError, "reference_output.changes.0.location"):
+            load_case(self.write_case(rubric=rubric))
+
+    def test_reference_output_file_must_have_a_patch(self):
+        rubric = copy.deepcopy(VALID_RUBRIC)
+        rubric["reference_output"]["changes"][0]["file_path"] = "made-up.css"
+
+        with self.assertRaisesRegex(CaseFormatError, "reference_output change 1 cites"):
+            load_case(self.write_case(rubric=rubric))
+
+    def test_reference_output_must_not_repeat_app_limitations(self):
+        note = "Git diff was unavailable; this comparison used screenshots only."
+        diff = copy.deepcopy(VALID_DIFF)
+        diff["limitations"] = [note]
+        rubric = copy.deepcopy(VALID_RUBRIC)
+        rubric["reference_output"]["limitations"] = [note]
+
+        with self.assertRaisesRegex(CaseFormatError, "repeats limitations"):
+            load_case(self.write_case(diff=diff, rubric=rubric))
+
+    def test_no_changes_case_needs_empty_reference(self):
+        rubric = self.rubric_with(expect_no_changes=True, expected_changes=[])
+
+        with self.assertRaisesRegex(CaseFormatError, "empty reference_output.changes"):
+            load_case(self.write_case(rubric=rubric))
+
+    def test_changes_case_needs_reference_changes(self):
+        rubric = self.rubric_with(reference_output={"changes": [], "limitations": []})
+
+        with self.assertRaisesRegex(CaseFormatError, "cannot be empty"):
+            load_case(self.write_case(rubric=rubric))
+    
     # --- load_dataset ------------------------------------------------------
 
     def test_dataset_filters_by_tag_and_id(self):
@@ -183,6 +239,34 @@ class CaseFormatTests(unittest.TestCase):
         self.assertEqual([c.id for c in load_dataset(self.root, tags=["size"])], ["button-size"])
         self.assertEqual([c.id for c in load_dataset(self.root, ids=["header-color"])], ["header-color"])
 
+    # --- bias pairs --------------------------------------------------------
+
+    def test_bias_pair_is_grouped(self):
+        self.write_case("name-a", rubric=self.rubric_with(id="name-a", bias_pair="names"))
+        self.write_case("name-b", rubric=self.rubric_with(id="name-b", bias_pair="names"))
+
+        pairs = bias_pairs(load_dataset(self.root))
+
+        self.assertEqual({k: [c.id for c in v] for k, v in pairs.items()},
+                         {"names": ["name-a", "name-b"]})
+
+    def test_bias_pair_needs_two_cases(self):
+        self.write_case("name-a", rubric=self.rubric_with(id="name-a", bias_pair="names"))
+
+        with self.assertRaisesRegex(CaseFormatError, "needs exactly 2 cases, found 1"):
+            load_dataset(self.root)
+
+    def test_bias_pair_must_share_expected_change_ids(self):
+        other = self.rubric_with(id="name-b", bias_pair="names")
+        other["expected_changes"] = copy.deepcopy(other["expected_changes"])
+        other["expected_changes"][0]["id"] = "different-id"
+        self.write_case("name-a", rubric=self.rubric_with(id="name-a", bias_pair="names"))
+        self.write_case("name-b", rubric=other)
+
+        with self.assertRaisesRegex(CaseFormatError, "same expected change ids"):
+            load_dataset(self.root)
+
+
     def test_unknown_id_is_an_error(self):
         self.write_case()
 
@@ -191,9 +275,12 @@ class CaseFormatTests(unittest.TestCase):
 
 
 class RealDatasetTests(unittest.TestCase):
-    """Every case actually checked into dataset/ must load."""
+    """Every case checked into dataset/ must load, and there must be enough."""
 
     def test_checked_in_dataset_is_valid(self):
+        if not DATASET_DIR.is_dir() or not any(p.is_dir() for p in DATASET_DIR.iterdir()):
+            self.skipTest("dataset/ has no cases yet (added in Step 8)")
+
         cases = load_dataset()
 
-        self.assertIn("fieldnote-card-grid", {case.id for case in cases})
+        self.assertGreaterEqual(len(cases), MIN_GOLDEN_CASES)

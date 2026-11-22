@@ -15,14 +15,17 @@ obvious which is which.
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
+from git_gallery_app.comparison_schema import ComparisonResult
+
 DATASET_DIR = Path(__file__).resolve().parent / "dataset"
+
+# Sprint requirement: the golden set must contain at least this many cases.
+MIN_GOLDEN_CASES = 15
 
 # Sentinel for ExpectedChange.expected_file_path: "don't grade the file".
 ANY_FILE = "*"
@@ -102,6 +105,12 @@ class Rubric(BaseModel):
     allowed_extra_changes: int = Field(default=0, ge=0)
     forbidden_claims: list[str] = Field(default_factory=list)
     required_limitations: list[str] = Field(default_factory=list)
+    # A hand-written ideal answer in the exact production response format.
+    # Used to prove the graders score a perfect answer as perfect.
+    reference_output: ComparisonResult
+    # Cases sharing a bias_pair name are counterfactual twins: the same visual
+    # change, differing only in something irrelevant (names, language, ...).
+    bias_pair: str | None = Field(default=None, pattern=ID_PATTERN)
 
     @model_validator(mode="after")
     def _consistent(self):
@@ -110,6 +119,10 @@ class Rubric(BaseModel):
                 raise ValueError("expect_no_changes cases cannot list expected_changes")
             if self.allowed_extra_changes:
                 raise ValueError("expect_no_changes cases cannot allow extra changes")
+            if self.reference_output.changes:
+                raise ValueError("expect_no_changes cases need an empty reference_output.changes")
+        elif not self.reference_output.changes:
+            raise ValueError("reference_output.changes cannot be empty for a case with changes")
         elif not any(change.required for change in self.expected_changes):
             raise ValueError(
                 "list at least one required expected change, "
@@ -181,6 +194,21 @@ def load_case(directory: Path) -> Case:
                 f"{directory.name}: expected change {change.id!r} expects "
                 f"file {path!r}, but diff.json has no patch for it"
             )
+    
+    reference = rubric.reference_output
+    for index, change in enumerate(reference.changes, start=1):
+        if change.file_path is not None and change.file_path not in supported:
+            raise CaseFormatError(
+                f"{directory.name}: reference_output change {index} cites "
+                f"{change.file_path!r}, but diff.json has no patch for it"
+            )
+
+    repeated = sorted(set(reference.limitations) & set(diff.limitations))
+    if repeated:
+        raise CaseFormatError(
+            f"{directory.name}: reference_output repeats limitations the app "
+            f"already adds: {repeated}"
+        )
 
     return Case(
         id=rubric.id,
@@ -208,7 +236,9 @@ def load_dataset(
         for folder in sorted(root.iterdir())
         if folder.is_dir() and not folder.name.startswith((".", "_"))
     ]
-
+    
+    bias_pairs(cases)  # validate pairs across the whole dataset
+    
     if ids:
         known = {case.id for case in cases}
         unknown = sorted(set(ids) - known)
@@ -222,3 +252,27 @@ def load_dataset(
     if not cases:
         raise CaseFormatError("no cases matched")
     return cases
+
+def bias_pairs(cases: list[Case]) -> dict[str, tuple[Case, Case]]:
+    """Group counterfactual twins by bias_pair name, checking each pair is valid."""
+    groups: dict[str, list[Case]] = {}
+    for case in cases:
+        if case.rubric.bias_pair:
+            groups.setdefault(case.rubric.bias_pair, []).append(case)
+
+    pairs = {}
+    for name, members in sorted(groups.items()):
+        if len(members) != 2:
+            raise CaseFormatError(
+                f"bias pair {name!r} needs exactly 2 cases, found {len(members)}"
+            )
+        first, second = members
+        first_ids = [change.id for change in first.rubric.expected_changes]
+        second_ids = [change.id for change in second.rubric.expected_changes]
+        if first_ids != second_ids:
+            raise CaseFormatError(
+                f"bias pair {name!r}: {first.id} and {second.id} must list "
+                f"the same expected change ids"
+            )
+        pairs[name] = (first, second)
+    return pairs
