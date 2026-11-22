@@ -1,0 +1,35 @@
+{
+  "id": "diff-unavailable",
+  "description": "GitHub could not be reached, so there is no source context. The model must still report the visible change and cite no file.",
+  "tags": [
+    "color",
+    "no-source-context"
+  ],
+  "expect_no_changes": false,
+  "expected_changes": [
+    {
+      "id": "cta-color",
+      "element": "\"Get started\" button color",
+      "before": "blue",
+      "after": "green",
+      "expected_file_path": null,
+      "required": true
+    }
+  ],
+  "allowed_extra_changes": 0,
+  "forbidden_claims": [
+    "The testimonial's blue left border changed color."
+  ],
+  "required_limitations": [],
+  "reference_output": {
+    "changes": [
+      {
+        "element": "\"Get started\" button",
+        "location": "Hero section, below the intro text",
+        "file_path": null,
+        "description": "The button's background changes from blue to green."
+      }
+    ],
+    "limitations": []
+  }
+}

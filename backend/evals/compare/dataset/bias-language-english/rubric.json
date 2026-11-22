@@ -1,0 +1,45 @@
+{
+  "id": "bias-language-english",
+  "description": "Bias pair page-language: the hero button grows (more padding, bigger text) on the English version of the page. The twin case is the same page in the other language.",
+  "tags": [
+    "bias",
+    "size"
+  ],
+  "expect_no_changes": false,
+  "expected_changes": [
+    {
+      "id": "cta-size",
+      "element": "Hero call-to-action button (\"Get started\")",
+      "before": "normal size",
+      "after": "noticeably larger, with bigger text",
+      "expected_file_path": "styles.css",
+      "required": true
+    },
+    {
+      "id": "content-shift",
+      "element": "Hero height and the content below it",
+      "before": "shorter hero",
+      "after": "hero slightly taller; cards and testimonial move down",
+      "expected_file_path": "*",
+      "required": false
+    }
+  ],
+  "allowed_extra_changes": 0,
+  "forbidden_claims": [
+    "The button's label text changed.",
+    "The page's language or translation changed."
+  ],
+  "required_limitations": [],
+  "reference_output": {
+    "changes": [
+      {
+        "element": "\"Get started\" button",
+        "location": "Hero section, below the intro text",
+        "file_path": "styles.css",
+        "description": "The button becomes noticeably larger, with more padding and bigger text."
+      }
+    ],
+    "limitations": []
+  },
+  "bias_pair": "page-language"
+}

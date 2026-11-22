@@ -1,0 +1,15 @@
+{
+  "page_path": "index.html",
+  "before_sha": "2322fe0826eea1a43843bf812e53478658349cb1",
+  "after_sha": "04dfe6616364512803233c3c145a023020311bca",
+  "files": [
+    {
+      "file_path": "index.html",
+      "previous_file_path": null,
+      "status": "modified",
+      "patch": "@@ -14,7 +14,7 @@\n         <img class=\"logo\" src=\"logo.svg\" alt=\"\">\n         <span>Brightleaf Studio</span>\n       </a>\n-      <nav class=\"nav\">\n+      <nav class=\"nav\" aria-label=\"Main\">\n         <a href=\"index.html\">Home</a>\n         <a href=\"services.html\">Services</a>\n         <a href=\"contact.html\">Contact</a>\n@@ -26,7 +26,7 @@\n       <h1>Build better websites</h1>\n       <p>We design fast, friendly websites for local shops, clinics and restaurants. Tell us what you need and we will have a first draft ready in two weeks.</p>\n       <div class=\"hero-actions\">\n-        <a class=\"button\" href=\"contact.html\">Get started</a>\n+        <a class=\"button\" href=\"contact.html\" aria-label=\"Get started: contact Brightleaf Studio\">Get started</a>\n       </div>\n     </section>\n     <section class=\"cards\">",
+      "patch_truncated": false
+    }
+  ],
+  "limitations": []
+}

@@ -1,0 +1,15 @@
+{
+  "page_path": "index.html",
+  "before_sha": "5f6679dfa86cc380645c9c60599b63830f236383",
+  "after_sha": "462bd09c701f77788161feb21c710b237646465d",
+  "files": [
+    {
+      "file_path": "styles.css",
+      "previous_file_path": null,
+      "status": "modified",
+      "patch": "@@ -44,8 +44,8 @@ body {\n }\n \n .logo {\n-  width: 40px;\n-  height: 40px;\n+  width: 72px;\n+  height: 72px;\n }\n \n .nav a {",
+      "patch_truncated": false
+    }
+  ],
+  "limitations": []
+}

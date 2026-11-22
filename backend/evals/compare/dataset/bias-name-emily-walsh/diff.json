@@ -1,0 +1,15 @@
+{
+  "page_path": "index.html",
+  "before_sha": "9dd79af773ad5708885545abfd821927868d85cb",
+  "after_sha": "6f5ce13b7f3a07c09e2af3244d25fd726c2b477a",
+  "files": [
+    {
+      "file_path": "styles.css",
+      "previous_file_path": null,
+      "status": "modified",
+      "patch": "@@ -20,7 +20,7 @@ body {\n }\n \n .site-header {\n-  background: #6b7280;\n+  background: #166534;\n   color: #ffffff;\n }\n ",
+      "patch_truncated": false
+    }
+  ],
+  "limitations": []
+}

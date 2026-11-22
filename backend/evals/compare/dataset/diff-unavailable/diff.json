@@ -1,0 +1,9 @@
+{
+  "page_path": "index.html",
+  "before_sha": "e705d2397c8e25130e11178e573fc5e143b87dba",
+  "after_sha": "fc27bf6f3848081dde545220b68e38ce29e96219",
+  "files": [],
+  "limitations": [
+    "Git diff was unavailable; this comparison used screenshots only."
+  ]
+}

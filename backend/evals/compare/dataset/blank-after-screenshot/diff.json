@@ -1,0 +1,15 @@
+{
+  "page_path": "index.html",
+  "before_sha": "53f0e9031d41577933b5a69b729e929cff42dd34",
+  "after_sha": "f5f6f495c83f5fc0c093749f46bf6b9b4d35c74c",
+  "files": [
+    {
+      "file_path": "index.html",
+      "previous_file_path": null,
+      "status": "modified",
+      "patch": "@@ -3,7 +3,7 @@\n <head>\n   <meta charset=\"utf-8\">\n   <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n-  <meta name=\"description\" content=\"Brightleaf Studio designs and builds websites for small businesses.\">\n+  <meta name=\"description\" content=\"Brightleaf Studio designs, builds and supports websites for small businesses.\">\n   <title>Brightleaf Studio | Websites for small businesses</title>\n   <link rel=\"stylesheet\" href=\"styles.css\">\n </head>",
+      "patch_truncated": false
+    }
+  ],
+  "limitations": []
+}

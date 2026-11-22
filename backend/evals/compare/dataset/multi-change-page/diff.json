@@ -1,0 +1,22 @@
+{
+  "page_path": "index.html",
+  "before_sha": "6df4c67042458f5e2abafe06e51b4f917baa2558",
+  "after_sha": "3253a3b1efcc00e823e90d4284fe078de5c00aa5",
+  "files": [
+    {
+      "file_path": "index.html",
+      "previous_file_path": null,
+      "status": "modified",
+      "patch": "@@ -23,7 +23,7 @@\n   </header>\n   <main>\n     <section class=\"hero\">\n-      <h1>Build better websites</h1>\n+      <h1>Websites your customers will love</h1>\n       <p>We design fast, friendly websites for local shops, clinics and restaurants. Tell us what you need and we will have a first draft ready in two weeks.</p>\n       <div class=\"hero-actions\">\n         <a class=\"button\" href=\"contact.html\">Get started</a>\n@@ -53,7 +53,6 @@\n       <span>&copy; 2026 Brightleaf Studio</span>\n       <nav class=\"footer-links\">\n         <a href=\"privacy.html\">Privacy</a>\n-        <a href=\"careers.html\">Careers</a>\n         <a href=\"contact.html\">Contact</a>\n       </nav>\n     </div>",
+      "patch_truncated": false
+    },
+    {
+      "file_path": "styles.css",
+      "previous_file_path": null,
+      "status": "modified",
+      "patch": "@@ -105,7 +105,7 @@ main {\n }\n \n .card {\n-  background: #ffffff;\n+  background: #dbeafe;\n   border: 1px solid #d1d5db;\n   border-radius: 8px;\n   padding: 24px;",
+      "patch_truncated": false
+    }
+  ],
+  "limitations": []
+}

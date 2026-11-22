@@ -1,0 +1,15 @@
+{
+  "page_path": "index.html",
+  "before_sha": "df97c949bac1ee366da0cdeec3bbc88e2d1d622b",
+  "after_sha": "3ee3d595eaf974a2617a4f951cd0bfab447eab9e",
+  "files": [
+    {
+      "file_path": "index.html",
+      "previous_file_path": null,
+      "status": "modified",
+      "patch": "@@ -17,6 +17,7 @@\n       <nav class=\"nav\">\n         <a href=\"index.html\">Home</a>\n         <a href=\"services.html\">Services</a>\n+        <a href=\"about.html\">About</a>\n         <a href=\"contact.html\">Contact</a>\n       </nav>\n     </div>",
+      "patch_truncated": false
+    }
+  ],
+  "limitations": []
+}

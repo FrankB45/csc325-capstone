@@ -1,0 +1,59 @@
+{
+  "id": "button-text-and-corners",
+  "description": "Two changes to one button in two files: its label (contact.html) and its corner shape (styles.css).",
+  "tags": [
+    "text",
+    "shape",
+    "multi-file"
+  ],
+  "expect_no_changes": false,
+  "expected_changes": [
+    {
+      "id": "button-label",
+      "element": "Form submit button label",
+      "before": "Submit",
+      "after": "Send message",
+      "expected_file_path": "contact.html",
+      "required": true
+    },
+    {
+      "id": "button-corners",
+      "element": "Form submit button corners",
+      "before": "square corners",
+      "after": "rounded corners",
+      "expected_file_path": "styles.css",
+      "required": true
+    },
+    {
+      "id": "button-width",
+      "element": "Form submit button width",
+      "before": "narrow",
+      "after": "wider, to fit the longer label",
+      "expected_file_path": "*",
+      "required": false
+    }
+  ],
+  "allowed_extra_changes": 0,
+  "forbidden_claims": [
+    "The Name, Email or Message form fields changed.",
+    "The button's color changed."
+  ],
+  "required_limitations": [],
+  "reference_output": {
+    "changes": [
+      {
+        "element": "Form submit button",
+        "location": "Below the Message field",
+        "file_path": "contact.html",
+        "description": "The button label changes from \"Submit\" to \"Send message\"."
+      },
+      {
+        "element": "Form submit button",
+        "location": "Below the Message field",
+        "file_path": "styles.css",
+        "description": "The button's corners change from square to rounded."
+      }
+    ],
+    "limitations": []
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "id": "relevant-file-omitted",
+  "description": "The commit adds three new pages and changes the header color in styles.css. The new pages fill the context budget, so styles.css is dropped from the diff. The visible header change must be reported with no file cited.",
+  "tags": [
+    "color",
+    "source-context",
+    "omitted-file"
+  ],
+  "expect_no_changes": false,
+  "expected_changes": [
+    {
+      "id": "header-bg",
+      "element": "Header bar background",
+      "before": "medium gray",
+      "after": "teal",
+      "expected_file_path": null,
+      "required": true
+    }
+  ],
+  "allowed_extra_changes": 0,
+  "forbidden_claims": [
+    "Content from the new About, Blog or Careers pages appears on this page."
+  ],
+  "required_limitations": [],
+  "reference_output": {
+    "changes": [
+      {
+        "element": "Header bar",
+        "location": "Top of the page",
+        "file_path": null,
+        "description": "The header bar's background changes from gray to teal."
+      }
+    ],
+    "limitations": []
+  }
+}

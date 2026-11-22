@@ -1,0 +1,19 @@
+{
+  "id": "identical-pages",
+  "description": "The commit only re-indents the footer HTML. The screenshots are pixel-identical, so the correct answer is an empty change list.",
+  "tags": [
+    "no-change",
+    "whitespace"
+  ],
+  "expect_no_changes": true,
+  "expected_changes": [],
+  "allowed_extra_changes": 0,
+  "forbidden_claims": [
+    "The footer's layout, spacing, text or links changed."
+  ],
+  "required_limitations": [],
+  "reference_output": {
+    "changes": [],
+    "limitations": []
+  }
+}

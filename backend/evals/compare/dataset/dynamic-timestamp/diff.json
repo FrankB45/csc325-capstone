@@ -1,0 +1,9 @@
+{
+  "page_path": "index.html",
+  "before_sha": "8eec6d525c5eef635473a611e9c736e586a8ab61",
+  "after_sha": "d4c75506f717077d7b439b79e3d4b5e06b797b93",
+  "files": [],
+  "limitations": [
+    "Source context includes only HTML, CSS, and JavaScript."
+  ]
+}

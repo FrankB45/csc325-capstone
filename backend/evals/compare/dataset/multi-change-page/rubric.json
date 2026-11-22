@@ -1,0 +1,66 @@
+{
+  "id": "multi-change-page",
+  "description": "Three unrelated changes in one commit: new hero heading text, light blue card backgrounds, and the footer's Careers link removed.",
+  "tags": [
+    "multi-change",
+    "text",
+    "color",
+    "removal"
+  ],
+  "expect_no_changes": false,
+  "expected_changes": [
+    {
+      "id": "heading-text",
+      "element": "Hero heading",
+      "before": "Build better websites",
+      "after": "Websites your customers will love",
+      "expected_file_path": "index.html",
+      "required": true
+    },
+    {
+      "id": "card-bg",
+      "element": "Feature card backgrounds (Design, Development, Support)",
+      "before": "white",
+      "after": "light blue",
+      "expected_file_path": "styles.css",
+      "required": true
+    },
+    {
+      "id": "footer-careers",
+      "element": "Footer links",
+      "before": "Privacy, Careers, Contact",
+      "after": "Privacy, Contact (Careers removed)",
+      "expected_file_path": "index.html",
+      "required": true
+    }
+  ],
+  "allowed_extra_changes": 0,
+  "forbidden_claims": [
+    "The Privacy or Contact footer link was removed.",
+    "The card titles or card descriptions changed."
+  ],
+  "required_limitations": [],
+  "reference_output": {
+    "changes": [
+      {
+        "element": "Hero heading",
+        "location": "Hero section, top of the main content",
+        "file_path": "index.html",
+        "description": "The heading changes from \"Build better websites\" to \"Websites your customers will love\"."
+      },
+      {
+        "element": "Feature cards",
+        "location": "Row of three cards below the hero",
+        "file_path": "styles.css",
+        "description": "The Design, Development and Support cards change from a white to a light blue background."
+      },
+      {
+        "element": "Footer links",
+        "location": "Bottom right of the page",
+        "file_path": "index.html",
+        "description": "The \"Careers\" link is removed, leaving \"Privacy\" and \"Contact\"."
+      }
+    ],
+    "limitations": []
+  }
+}

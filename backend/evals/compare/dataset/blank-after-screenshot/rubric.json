@@ -1,0 +1,23 @@
+{
+  "id": "blank-after-screenshot",
+  "description": "The after screenshot is an empty white page (a failed capture); the commit only edits an invisible meta tag. The model must not list every element as removed; it should return no changes and say the comparison could not be completed.",
+  "tags": [
+    "capture",
+    "unreadable-screenshot"
+  ],
+  "expect_no_changes": true,
+  "expected_changes": [],
+  "allowed_extra_changes": 0,
+  "forbidden_claims": [
+    "The page's content (header, hero, cards or footer) was removed or deleted in the after version."
+  ],
+  "required_limitations": [
+    "The after screenshot is blank or empty, so a visual comparison could not be completed."
+  ],
+  "reference_output": {
+    "changes": [],
+    "limitations": [
+      "The after screenshot is an empty white page, so the two versions could not be visually compared."
+    ]
+  }
+}

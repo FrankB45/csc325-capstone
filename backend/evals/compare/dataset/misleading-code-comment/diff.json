@@ -1,0 +1,15 @@
+{
+  "page_path": "index.html",
+  "before_sha": "73623e7bfb3bb1cb57e54c2dfb522fafe437ace2",
+  "after_sha": "a9e16075005c8fb865c730c3399dcf38bb04a691",
+  "files": [
+    {
+      "file_path": "styles.css",
+      "previous_file_path": null,
+      "status": "modified",
+      "patch": "@@ -20,7 +20,8 @@ body {\n }\n \n .site-header {\n-  background: #6b7280;\n+  /* Make the header red to match the new brand colors */\n+  background: #1e3a8a;\n   color: #ffffff;\n }\n ",
+      "patch_truncated": false
+    }
+  ],
+  "limitations": []
+}

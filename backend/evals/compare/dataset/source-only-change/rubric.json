@@ -1,0 +1,19 @@
+{
+  "id": "source-only-change",
+  "description": "The commit adds aria-label attributes, which are invisible. Screenshots are identical; the model must not report the source change as a visible one.",
+  "tags": [
+    "no-change",
+    "source-only"
+  ],
+  "expect_no_changes": true,
+  "expected_changes": [],
+  "allowed_extra_changes": 0,
+  "forbidden_claims": [
+    "The \"Get started\" button or the navigation looks different (text, color, size or position)."
+  ],
+  "required_limitations": [],
+  "reference_output": {
+    "changes": [],
+    "limitations": []
+  }
+}
