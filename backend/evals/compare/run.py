@@ -19,6 +19,8 @@ from git_gallery_app.services.llm import ComparisonRequestError
 from .cases import load_dataset
 from .graders import RunOutput, run_hard_checks
 from .judge import JudgeError, JudgeVerdict, judge_checks, request_verdict
+from .scoring import report, score
+
 
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
 
@@ -136,10 +138,10 @@ def main(argv=None):
 
     cases = load_dataset(ids=args.cases)
     if args.offline:
-        run_offline(cases, args.offline)
+        results = run_offline(cases, args.offline)
     else:
-        run_live(cases, args.runs)
-    return 0
+        results = run_live(cases, args.runs)
+    return 0 if report(score(cases, results)) else 1
 
 
 if __name__ == "__main__":
