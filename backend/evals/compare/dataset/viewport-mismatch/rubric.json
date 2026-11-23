@@ -23,6 +23,14 @@
       "after": "cards stacked in a single column (because the after screenshot is narrower)",
       "expected_file_path": null,
       "required": false
+    },
+    {
+      "id": "layout-reflow",
+      "element": "Rest of the page layout (hero panel, side margins, testimonial and footer positions)",
+      "before": "laid out for the wider before capture",
+      "after": "narrower layout; sections are narrower or taller and sit lower on the page",
+      "expected_file_path": null,
+      "required": false
     }
   ],
   "allowed_extra_changes": 0,

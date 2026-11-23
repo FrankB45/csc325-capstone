@@ -17,9 +17,9 @@
     },
     {
       "id": "page-taller",
-      "element": "Page length",
-      "before": "shorter",
-      "after": "taller, because the cards now take two rows",
+      "element": "Page length and the content below the cards (testimonial, footer)",
+      "before": "shorter page; testimonial and footer sit higher",
+      "after": "taller page; testimonial and footer sit lower because the cards now take two rows",
       "expected_file_path": "*",
       "required": false
     }
