@@ -63,6 +63,7 @@ def saved_project(project_id="saved-project", url=SAVED_URL, name="Saved project
             "commits": [
                 {
                     "sha": sha, "message": "Saved commit " + str(index + 1),
+                    "author_name": "Saved author " + str(index + 1),
                     "date": "2026-11-16T10:00:00Z", "status": "complete",
                     "error_message": "", "position": index,
                     "screenshot_url": f"/api/jobs/{job_id}/captures/{index}/image/",
@@ -115,7 +116,7 @@ def accepted_report():
 def fresh_commits():
     return {
         "commits": [
-            {"sha": sha, "message": "Fresh commit " + str(index + 1), "date": "2026-11-17T10:00:00Z"}
+            {"sha": sha, "message": "Fresh commit " + str(index + 1), "date": "2026-11-17T10:00:00Z", "author_name": "Fresh author " + str(index + 1)}
             for index, sha in enumerate(FRESH_SHAS)
         ],
         "preselected": FRESH_SHAS[:],
