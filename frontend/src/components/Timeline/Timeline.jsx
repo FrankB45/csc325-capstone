@@ -74,6 +74,14 @@ const Timeline = ({ commits, selectedIds, slotById, activeSlot, comparisonMode, 
                     <span>({commit.sha.slice(0, 7)})</span>
                     {failed && <span className={styles.failedLabel}>Capture failed</span>}
                   </span>
+
+                  <span className={styles.commitInfo} role="tooltip">
+                    <strong>{commit.message}</strong>
+                    <span>Author: {commit.author_name || "Unknown author"}</span>
+                    <span>
+                      {commit.sha.slice(0, 7)} · {formatShortDate(commit.date)}
+                    </span>
+                  </span>
                 </button>
               </li>
             );
