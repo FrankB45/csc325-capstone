@@ -11,6 +11,9 @@ jobs:
   eval:
     timeout-minutes: 10
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -24,10 +27,8 @@ jobs:
         working-directory: backend
         run: python -m pip install -r requirements.txt
 
-      - name: Test the comparison grader
-        working-directory: backend
-        run: python -m unittest discover -s git_gallery_app/evaluation -p "test_*.py" -v
+      - name: Test the eval suite (case format, graders, judge)
+        run: python -m unittest discover -s evals/compare/tests -t . -v
 
-      - name: Evaluate AI Compare responses
-        working-directory: backend
-        run: python git_gallery_app/evaluation/run_evaluation.py --mode mock
+      - name: Re-grade the recorded baseline against the thresholds
+        run: python -m evals.compare.run --offline evals/compare/baseline.json

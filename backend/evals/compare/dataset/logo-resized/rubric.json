@@ -21,6 +21,14 @@
       "after": "taller, to fit the larger logo",
       "expected_file_path": "*",
       "required": false
+    },
+    {
+      "id": "content-shift",
+      "element": "Everything below the header (hero, service cards, testimonial, footer)",
+      "before": "starts right below the shorter header",
+      "after": "pushed down by the taller header, otherwise unchanged",
+      "expected_file_path": "*",
+      "required": false
     }
   ],
   "allowed_extra_changes": 0,
