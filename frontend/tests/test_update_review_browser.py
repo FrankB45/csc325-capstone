@@ -321,6 +321,26 @@ class UpdateReviewBrowserTests(unittest.TestCase):
         expect(second_info).to_contain_text("11/16/26")
         expect(first_info).to_have_css("opacity", "0")
 
+    def test_failed_capture_keeps_commit_details_and_reason(self):
+        self.source["analysis"]["commits"][1].update({
+            "status": "failed",
+            "error_message": "Page did not load.",
+            "screenshot_url": None,
+        })
+        self.open_source()
+
+        failed_commit = self.page.get_by_role(
+            "button",
+            name=re.compile("^Select commit 2222222:"),
+        )
+        failed_commit.hover()
+
+        info = self.page.locator("[role=tooltip]").filter(has_text="Saved commit 2")
+        expect(info).to_have_css("opacity", "1")
+        expect(info).to_contain_text("Saved author 2")
+        expect(info).to_contain_text(SECOND_SHA[:7])
+        expect(info).to_contain_text("Capture failed: Page did not load.")
+
     def open_review(self):
         self.page.get_by_role("button", name="Sync Updates", exact=True).click()
         expect(self.page.get_by_role("heading", name="Review update", exact=True)).to_be_visible()
