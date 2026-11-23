@@ -1,0 +1,39 @@
+{
+  "id": "dynamic-timestamp",
+  "description": "Only README.md changes. The page's \"Last updated\" line is filled in by JavaScript when the page loads, so it differs between captures. The model should report the visible text change but flag it as likely dynamic content.",
+  "tags": [
+    "text",
+    "dynamic-content"
+  ],
+  "expect_no_changes": false,
+  "expected_changes": [
+    {
+      "id": "updated-date",
+      "element": "\"Last updated\" text below the testimonial",
+      "before": "Last updated: March 3, 2026 at 9:14 AM",
+      "after": "Last updated: November 21, 2026 at 4:42 PM",
+      "expected_file_path": null,
+      "required": true
+    }
+  ],
+  "allowed_extra_changes": 0,
+  "forbidden_claims": [
+    "A developer edited the date in the page's source code."
+  ],
+  "required_limitations": [
+    "The \"Last updated\" date looks like dynamic content (set when the page loads or is captured), so its change may not come from the commit."
+  ],
+  "reference_output": {
+    "changes": [
+      {
+        "element": "\"Last updated\" text",
+        "location": "Below the testimonial, above the footer",
+        "file_path": null,
+        "description": "The date changes from \"March 3, 2026 at 9:14 AM\" to \"November 21, 2026 at 4:42 PM\"."
+      }
+    ],
+    "limitations": [
+      "The \"Last updated\" date may be generated when the page loads, so it can differ between captures without a code change."
+    ]
+  }
+}

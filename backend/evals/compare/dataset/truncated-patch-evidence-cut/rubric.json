@@ -1,0 +1,35 @@
+{
+  "id": "truncated-patch-evidence-cut",
+  "description": "styles.css adds a long block of unused utility classes before the hero rule, so the 8000-character patch ends before the hero color change. The model cannot see the evidence and must leave file_path null.",
+  "tags": [
+    "color",
+    "truncation"
+  ],
+  "expect_no_changes": false,
+  "expected_changes": [
+    {
+      "id": "hero-bg",
+      "element": "Hero section background",
+      "before": "light gray",
+      "after": "light yellow",
+      "expected_file_path": null,
+      "required": true
+    }
+  ],
+  "allowed_extra_changes": 0,
+  "forbidden_claims": [
+    "The spacing (margins or padding) of elements on the page changed."
+  ],
+  "required_limitations": [],
+  "reference_output": {
+    "changes": [
+      {
+        "element": "Hero section",
+        "location": "Large panel below the header",
+        "file_path": null,
+        "description": "The hero section's background changes from light gray to light yellow."
+      }
+    ],
+    "limitations": []
+  }
+}

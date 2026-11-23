@@ -1,0 +1,15 @@
+{
+  "page_path": "index.html",
+  "before_sha": "eda4590cb34769c251898a71c5c3d6fe66704d1e",
+  "after_sha": "d36b2c3242f70ecedebfb5265933a3bf1352fed3",
+  "files": [
+    {
+      "file_path": "index.html",
+      "previous_file_path": null,
+      "status": "modified",
+      "patch": "@@ -23,7 +23,7 @@\n   </header>\n   <main>\n     <section class=\"hero\">\n-      <h1>Build better websites</h1>\n+      <h1>Websites that work as hard as you do</h1>\n       <p>We design fast, friendly websites for local shops, clinics and restaurants. Tell us what you need and we will have a first draft ready in two weeks.</p>\n       <div class=\"hero-actions\">\n         <a class=\"button\" href=\"contact.html\">Get started</a>",
+      "patch_truncated": false
+    }
+  ],
+  "limitations": []
+}

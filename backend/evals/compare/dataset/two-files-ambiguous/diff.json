@@ -1,0 +1,22 @@
+{
+  "page_path": "index.html",
+  "before_sha": "0056ae82a64294e8ef58259033d0d7611be31d2f",
+  "after_sha": "4577d2542b6f1b7bb215fb7b3c969b162ae1bc4c",
+  "files": [
+    {
+      "file_path": "styles.css",
+      "previous_file_path": null,
+      "status": "modified",
+      "patch": "@@ -20,7 +20,7 @@ body {\n }\n \n .site-header {\n-  background: #6b7280;\n+  background: #581c87;\n   color: #ffffff;\n }\n ",
+      "patch_truncated": false
+    },
+    {
+      "file_path": "theme.css",
+      "previous_file_path": null,
+      "status": "modified",
+      "patch": "@@ -1,3 +1,3 @@\n .site-header {\n-  background: #6b7280;\n+  background: #581c87;\n }",
+      "patch_truncated": false
+    }
+  ],
+  "limitations": []
+}

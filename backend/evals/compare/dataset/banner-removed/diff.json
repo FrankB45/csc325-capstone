@@ -1,0 +1,15 @@
+{
+  "page_path": "index.html",
+  "before_sha": "047f2bb2a745a0ef005ca0b29a4a79189664f1ca",
+  "after_sha": "18ab030ab6db435cd96073c9abbe955066a3689a",
+  "files": [
+    {
+      "file_path": "index.html",
+      "previous_file_path": null,
+      "status": "modified",
+      "patch": "@@ -8,7 +8,6 @@\n   <link rel=\"stylesheet\" href=\"styles.css\">\n </head>\n <body>\n-  <div class=\"announcement\">Spring sale: 20% off all website packages until April 30</div>\n   <header class=\"site-header\">\n     <div class=\"inner\">\n       <a class=\"brand\" href=\"index.html\">",
+      "patch_truncated": false
+    }
+  ],
+  "limitations": []
+}

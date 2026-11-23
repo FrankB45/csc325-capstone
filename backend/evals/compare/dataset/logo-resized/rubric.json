@@ -1,0 +1,51 @@
+{
+  "id": "logo-resized",
+  "description": "The logo next to the brand name grows from 40px to 72px; the header gets taller as a side effect.",
+  "tags": [
+    "size"
+  ],
+  "expect_no_changes": false,
+  "expected_changes": [
+    {
+      "id": "logo-size",
+      "element": "Logo image in the header",
+      "before": "small (about 40px)",
+      "after": "much larger (about 72px)",
+      "expected_file_path": "styles.css",
+      "required": true
+    },
+    {
+      "id": "header-height",
+      "element": "Header bar height",
+      "before": "shorter",
+      "after": "taller, to fit the larger logo",
+      "expected_file_path": "*",
+      "required": false
+    },
+    {
+      "id": "content-shift",
+      "element": "Everything below the header (hero, service cards, testimonial, footer)",
+      "before": "starts right below the shorter header",
+      "after": "pushed down by the taller header, otherwise unchanged",
+      "expected_file_path": "*",
+      "required": false
+    }
+  ],
+  "allowed_extra_changes": 0,
+  "forbidden_claims": [
+    "The logo's image, shape or colors changed.",
+    "The brand name text changed."
+  ],
+  "required_limitations": [],
+  "reference_output": {
+    "changes": [
+      {
+        "element": "Header logo",
+        "location": "Top left of the header, next to \"Brightleaf Studio\"",
+        "file_path": "styles.css",
+        "description": "The logo becomes noticeably larger, and the header bar grows taller to fit it."
+      }
+    ],
+    "limitations": []
+  }
+}

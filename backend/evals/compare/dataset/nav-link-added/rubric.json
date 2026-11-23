@@ -1,0 +1,44 @@
+{
+  "id": "nav-link-added",
+  "description": "A new \"About\" link is added to the header navigation between Services and Contact.",
+  "tags": [
+    "presence",
+    "text"
+  ],
+  "expect_no_changes": false,
+  "expected_changes": [
+    {
+      "id": "nav-about",
+      "element": "Header navigation links",
+      "before": "Home, Services, Contact",
+      "after": "Home, Services, About, Contact (About link added)",
+      "expected_file_path": "index.html",
+      "required": true
+    },
+    {
+      "id": "nav-shift",
+      "element": "Position of the existing navigation links",
+      "before": "Home and Services further right",
+      "after": "Home and Services shifted left to make room",
+      "expected_file_path": "*",
+      "required": false
+    }
+  ],
+  "allowed_extra_changes": 0,
+  "forbidden_claims": [
+    "A navigation link was removed.",
+    "The header background color changed."
+  ],
+  "required_limitations": [],
+  "reference_output": {
+    "changes": [
+      {
+        "element": "Header navigation",
+        "location": "Top right of the header",
+        "file_path": "index.html",
+        "description": "A new \"About\" link appears between \"Services\" and \"Contact\"."
+      }
+    ],
+    "limitations": []
+  }
+}

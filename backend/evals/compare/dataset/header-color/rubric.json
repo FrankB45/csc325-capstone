@@ -1,0 +1,35 @@
+{
+  "id": "header-color",
+  "description": "One CSS value changes: the header bar goes from gray to navy blue.",
+  "tags": [
+    "color",
+    "single-change"
+  ],
+  "expect_no_changes": false,
+  "expected_changes": [
+    {
+      "id": "header-bg",
+      "element": "Header bar background",
+      "before": "medium gray",
+      "after": "navy blue",
+      "expected_file_path": "styles.css",
+      "required": true
+    }
+  ],
+  "allowed_extra_changes": 0,
+  "forbidden_claims": [
+    "The header's text, logo or navigation links changed."
+  ],
+  "required_limitations": [],
+  "reference_output": {
+    "changes": [
+      {
+        "element": "Header bar",
+        "location": "Top of the page",
+        "file_path": "styles.css",
+        "description": "The header bar's background changes from gray to navy blue."
+      }
+    ],
+    "limitations": []
+  }
+}

@@ -16,3 +16,5 @@ backend/package-lock.json
 
 # Env file
 *.env
+
+backend/evals/compare/results/

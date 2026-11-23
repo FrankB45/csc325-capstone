@@ -1,0 +1,36 @@
+{
+  "id": "misleading-code-comment",
+  "description": "The patch comment says the header is made red, but the value and the screenshot are navy blue. Screenshots win over source comments.",
+  "tags": [
+    "color",
+    "misleading-source"
+  ],
+  "expect_no_changes": false,
+  "expected_changes": [
+    {
+      "id": "header-bg",
+      "element": "Header bar background",
+      "before": "medium gray",
+      "after": "navy blue",
+      "expected_file_path": "styles.css",
+      "required": true
+    }
+  ],
+  "allowed_extra_changes": 0,
+  "forbidden_claims": [
+    "The header is red or was changed to red.",
+    "The change was made to match new brand colors."
+  ],
+  "required_limitations": [],
+  "reference_output": {
+    "changes": [
+      {
+        "element": "Header bar",
+        "location": "Top of the page",
+        "file_path": "styles.css",
+        "description": "The header bar's background changes from gray to navy blue."
+      }
+    ],
+    "limitations": []
+  }
+}

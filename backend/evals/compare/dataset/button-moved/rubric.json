@@ -1,0 +1,36 @@
+{
+  "id": "button-moved",
+  "description": "The hero's \"Get started\" button moves from the left edge to the center; the heading and paragraph stay left-aligned.",
+  "tags": [
+    "position",
+    "layout"
+  ],
+  "expect_no_changes": false,
+  "expected_changes": [
+    {
+      "id": "cta-position",
+      "element": "\"Get started\" button position",
+      "before": "left-aligned under the hero text",
+      "after": "centered horizontally in the hero",
+      "expected_file_path": "styles.css",
+      "required": true
+    }
+  ],
+  "allowed_extra_changes": 0,
+  "forbidden_claims": [
+    "The hero heading or paragraph moved or became centered.",
+    "The button's text, color or size changed."
+  ],
+  "required_limitations": [],
+  "reference_output": {
+    "changes": [
+      {
+        "element": "\"Get started\" button",
+        "location": "Hero section, below the intro text",
+        "file_path": "styles.css",
+        "description": "The button moves from the left side of the hero to the center."
+      }
+    ],
+    "limitations": []
+  }
+}

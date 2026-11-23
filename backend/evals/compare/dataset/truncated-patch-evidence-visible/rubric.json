@@ -1,0 +1,35 @@
+{
+  "id": "truncated-patch-evidence-visible",
+  "description": "Same visual change as truncated-patch-evidence-cut, but the hero rule comes first in the patch, before the cut. A truncated patch still counts as evidence (decision D2), so the model should cite styles.css.",
+  "tags": [
+    "color",
+    "truncation"
+  ],
+  "expect_no_changes": false,
+  "expected_changes": [
+    {
+      "id": "hero-bg",
+      "element": "Hero section background",
+      "before": "light gray",
+      "after": "light yellow",
+      "expected_file_path": "styles.css",
+      "required": true
+    }
+  ],
+  "allowed_extra_changes": 0,
+  "forbidden_claims": [
+    "The spacing (margins or padding) of elements on the page changed."
+  ],
+  "required_limitations": [],
+  "reference_output": {
+    "changes": [
+      {
+        "element": "Hero section",
+        "location": "Large panel below the header",
+        "file_path": "styles.css",
+        "description": "The hero section's background changes from light gray to light yellow."
+      }
+    ],
+    "limitations": []
+  }
+}

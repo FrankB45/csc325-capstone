@@ -1,0 +1,57 @@
+{
+  "id": "viewport-mismatch",
+  "description": "The heading text changes, but the after screenshot was captured 900px wide instead of 1280px, so the cards also stack into one column. The model must report the heading, flag the capture-size difference, and not call the reflow a redesign.",
+  "tags": [
+    "text",
+    "viewport",
+    "capture"
+  ],
+  "expect_no_changes": false,
+  "expected_changes": [
+    {
+      "id": "heading-text",
+      "element": "Hero heading",
+      "before": "Build better websites",
+      "after": "Websites that work as hard as you do",
+      "expected_file_path": "index.html",
+      "required": true
+    },
+    {
+      "id": "cards-stacked",
+      "element": "Feature cards layout",
+      "before": "three cards side by side",
+      "after": "cards stacked in a single column (because the after screenshot is narrower)",
+      "expected_file_path": null,
+      "required": false
+    },
+    {
+      "id": "layout-reflow",
+      "element": "Rest of the page layout (hero panel, side margins, testimonial and footer positions)",
+      "before": "laid out for the wider before capture",
+      "after": "narrower layout; sections are narrower or taller and sit lower on the page",
+      "expected_file_path": null,
+      "required": false
+    }
+  ],
+  "allowed_extra_changes": 0,
+  "forbidden_claims": [
+    "The commit changed the card layout (for example to a single column).",
+    "The page was redesigned to be responsive or mobile-friendly."
+  ],
+  "required_limitations": [
+    "The two screenshots were captured at different widths (the after one is narrower), so some layout differences may come from the capture size, not the code."
+  ],
+  "reference_output": {
+    "changes": [
+      {
+        "element": "Hero heading",
+        "location": "Hero section, top of the main content",
+        "file_path": "index.html",
+        "description": "The heading changes from \"Build better websites\" to \"Websites that work as hard as you do\"."
+      }
+    ],
+    "limitations": [
+      "The after screenshot is narrower than the before screenshot, so layout differences such as the cards stacking into one column may come from the capture width rather than the commit."
+    ]
+  }
+}

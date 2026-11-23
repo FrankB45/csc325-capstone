@@ -1,0 +1,15 @@
+{
+  "page_path": "index.html",
+  "before_sha": "ec791a1617b98b7466a564688a2e947fca6445b0",
+  "after_sha": "987c9a55858ee76d3bfaadb46aa144ad2d386f54",
+  "files": [
+    {
+      "file_path": "index.html",
+      "previous_file_path": null,
+      "status": "modified",
+      "patch": "@@ -49,14 +49,14 @@\n     </blockquote>\n   </main>\n   <footer class=\"site-footer\">\n-    <div class=\"inner\">\n-      <span>&copy; 2026 Brightleaf Studio</span>\n-      <nav class=\"footer-links\">\n-        <a href=\"privacy.html\">Privacy</a>\n-        <a href=\"careers.html\">Careers</a>\n-        <a href=\"contact.html\">Contact</a>\n-      </nav>\n-    </div>\n+      <div class=\"inner\">\n+        <span>&copy; 2026 Brightleaf Studio</span>\n+        <nav class=\"footer-links\">\n+          <a href=\"privacy.html\">Privacy</a>\n+          <a href=\"careers.html\">Careers</a>\n+          <a href=\"contact.html\">Contact</a>\n+        </nav>\n+      </div>\n   </footer>\n </body>\n </html>",
+      "patch_truncated": false
+    }
+  ],
+  "limitations": []
+}

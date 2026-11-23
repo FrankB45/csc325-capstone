@@ -1,0 +1,37 @@
+{
+  "id": "two-files-ambiguous",
+  "description": "theme.css and styles.css both change the same .site-header background to purple. The diff alone cannot say which rule wins, so file_path must be null.",
+  "tags": [
+    "color",
+    "ambiguous-source"
+  ],
+  "expect_no_changes": false,
+  "expected_changes": [
+    {
+      "id": "header-bg",
+      "element": "Header bar background",
+      "before": "medium gray",
+      "after": "dark purple",
+      "expected_file_path": null,
+      "required": true
+    }
+  ],
+  "allowed_extra_changes": 0,
+  "forbidden_claims": [
+    "The header's text or navigation links changed color."
+  ],
+  "required_limitations": [],
+  "reference_output": {
+    "changes": [
+      {
+        "element": "Header bar",
+        "location": "Top of the page",
+        "file_path": null,
+        "description": "The header bar's background changes from gray to dark purple."
+      }
+    ],
+    "limitations": [
+      "Both styles.css and theme.css change the header background to the same color, so the change cannot be attributed to one file."
+    ]
+  }
+}

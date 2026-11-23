@@ -1,0 +1,44 @@
+{
+  "id": "banner-removed",
+  "description": "The yellow announcement bar above the header is deleted. Tests that the model reports a removal as a removal.",
+  "tags": [
+    "presence",
+    "removal"
+  ],
+  "expect_no_changes": false,
+  "expected_changes": [
+    {
+      "id": "banner",
+      "element": "Announcement banner",
+      "before": "yellow bar above the header reading \"Spring sale: 20% off all website packages until April 30\"",
+      "after": "no banner (removed)",
+      "expected_file_path": "index.html",
+      "required": true
+    },
+    {
+      "id": "content-shift",
+      "element": "Everything below the banner",
+      "before": "starts below the banner",
+      "after": "moves up to the top of the page",
+      "expected_file_path": "*",
+      "required": false
+    }
+  ],
+  "allowed_extra_changes": 0,
+  "forbidden_claims": [
+    "The banner was added (rather than removed).",
+    "The banner moved somewhere else or only its text or color changed."
+  ],
+  "required_limitations": [],
+  "reference_output": {
+    "changes": [
+      {
+        "element": "Announcement banner",
+        "location": "Very top of the page, above the header",
+        "file_path": "index.html",
+        "description": "The yellow \"Spring sale: 20% off all website packages until April 30\" banner is removed; the header now starts at the top of the page."
+      }
+    ],
+    "limitations": []
+  }
+}
