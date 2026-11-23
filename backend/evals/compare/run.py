@@ -49,10 +49,13 @@ def run_once(case, system_prompt, compare, judge):
     verdict = None
     judge_error = None
     if output.raw is not None:
-        try:
-            verdict = judge(case, output.raw)
-        except JudgeError as error:
-            judge_error = str(error)
+        for _ in range(2):  # the judge occasionally returns a malformed verdict; try once more
+            try:
+                verdict = judge(case, output.raw)
+                judge_error = None
+                break
+            except JudgeError as error:
+                judge_error = str(error)
 
     return {
         "case_id": case.id,
