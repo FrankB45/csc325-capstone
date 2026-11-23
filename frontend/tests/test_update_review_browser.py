@@ -300,6 +300,27 @@ class UpdateReviewBrowserTests(unittest.TestCase):
         self.page.goto(ORIGIN + "/projects/saved-project/timeline")
         expect(self.page.get_by_role("button", name="Sync Updates", exact=True)).to_be_visible()
 
+    def test_timeline_hover_shows_the_current_commit_details(self):
+        self.open_source()
+
+        first = self.page.get_by_role("button", name=re.compile("^Select commit 1111111:"))
+        second = self.page.get_by_role("button", name=re.compile("^Select commit 2222222:"))
+
+        first.hover()
+        first_info = self.page.locator("[role=tooltip]").filter(has_text="Saved commit 1")
+        expect(first_info).to_have_css("opacity", "1")
+        expect(first_info).to_contain_text("Saved author 1")
+        expect(first_info).to_contain_text(FIRST_SHA[:7])
+        expect(first_info).to_contain_text("11/16/26")
+
+        second.hover()
+        second_info = self.page.locator("[role=tooltip]").filter(has_text="Saved commit 2")
+        expect(second_info).to_have_css("opacity", "1")
+        expect(second_info).to_contain_text("Saved author 2")
+        expect(second_info).to_contain_text(SECOND_SHA[:7])
+        expect(second_info).to_contain_text("11/16/26")
+        expect(first_info).to_have_css("opacity", "0")
+
     def open_review(self):
         self.page.get_by_role("button", name="Sync Updates", exact=True).click()
         expect(self.page.get_by_role("heading", name="Review update", exact=True)).to_be_visible()
