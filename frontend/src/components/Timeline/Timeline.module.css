@@ -105,6 +105,11 @@
   font-size: 12px;
 }
 
+.commitInfo .failureInfo {
+  color: var(--color-white);
+  font-weight: 700;
+}
+
 .hit:hover .commitInfo,
 .hit:focus-visible .commitInfo {
   opacity: 1;

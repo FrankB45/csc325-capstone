@@ -81,6 +81,11 @@ const Timeline = ({ commits, selectedIds, slotById, activeSlot, comparisonMode, 
                     <span>
                       {commit.sha.slice(0, 7)} · {formatShortDate(commit.date)}
                     </span>
+                    {failed && (
+                      <span className={styles.failureInfo}>
+                        Capture failed: {commit.error_message || "No reason was provided."}
+                      </span>
+                    )}
                   </span>
                 </button>
               </li>
