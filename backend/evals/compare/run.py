@@ -103,7 +103,7 @@ def run_live(cases, runs):
             print_result(result)
 
     RESULTS_DIR.mkdir(exist_ok=True)
-    path = RESULTS_DIR / f"{datetime.now():%Y%m%d-%H%M%S}.json"
+    path = RESULTS_DIR / f"{datetime.now():%Y-%m-%d_%H%M%S}_{settings.OPENAI_MODEL}.json"
     path.write_text(json.dumps({
         "model": settings.OPENAI_MODEL,
         "prompt_version": prompt_version,
