@@ -5,6 +5,12 @@
 .name { margin: 0; font-size: clamp(24px, 2.2vw, 32px); font-weight: 600; line-height: 1.25; color: var(--color-navy); }
 .meta { margin: 0; font-size: 20px; line-height: 1.2; color: var(--color-purple); }
 .name + .meta { margin-top: 4px; }
+.truncate {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* gradient-bordered screenshot (440 x 258 in the design) */
 .frameLink { display: block; margin-top: 38px; }

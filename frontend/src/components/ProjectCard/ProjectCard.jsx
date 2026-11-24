@@ -51,12 +51,17 @@ export const ProjectCardSkeleton = () => (
 const ProjectCard = ({ project, onDelete }) => {
   const [open, setOpen] = useState(false);
   const detailsId = useId();
+  const repository = project.repository_owner && project.repository_name
+    ? `${project.repository_owner}/${project.repository_name}`
+    : null;
 
   return (
     <article className={styles.card}>
       <div className={styles.text}>
         <div className={styles.headingRow}>
-          <h2 className={styles.name}>{project.name}</h2>
+          <h2 className={`${styles.name} ${styles.truncate}`} title={project.name}>
+            {project.name}
+          </h2>
           {onDelete && (
             <button
               type="button"
@@ -73,8 +78,10 @@ const ProjectCard = ({ project, onDelete }) => {
             </button>
           )}
         </div>
-        {project.repository_owner && project.repository_name && (
-          <p className={styles.meta}>{project.repository_owner}/{project.repository_name}</p>
+        {repository && (
+          <p className={`${styles.meta} ${styles.truncate}`} title={repository}>
+            {repository}
+          </p>
         )}
         <p className={styles.meta}>Last modified: {formatDate(project.lastModified)}</p>
         <p className={styles.meta}># of Commits: {project.commitCount}</p>
