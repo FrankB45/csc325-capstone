@@ -445,6 +445,11 @@ const selectedPage =
         next[otherIndex] = next[targetIndex];
       }
       next[targetIndex] = id;
+      if (next.every(Boolean)) {
+        const first = commits.find((commit) => commit.id === next[0]);
+        const second = commits.find((commit) => commit.id === next[1]);
+        if (first.position > second.position) return [next[1], next[0]];
+      }
       return next;
     });
     setActiveSlot(null);
