@@ -372,12 +372,15 @@ const selectedPage =
   const [overlayCommit, setOverlayCommit] = useState(null);
   const [downloadError, setDownloadError] = useState("");
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
+  const [pageSwitchError, setPageSwitchError] = useState("");
+  const [isSwitchingPage, setIsSwitchingPage] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState("");
   const [updateReview, setUpdateReview] = useState(null);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [updateCheckMessage, setUpdateCheckMessage] = useState("");
   const syncRequestRef = useRef(null);
+  const pageSwitchRequestRef = useRef(null);
   const updateCheckRef = useRef(null);
   const modeRowRef = useRef(null);
 
@@ -385,6 +388,8 @@ const selectedPage =
   useEffect(() => () => {
     syncRequestRef.current?.abort();
     syncRequestRef.current = null;
+    pageSwitchRequestRef.current?.abort();
+    pageSwitchRequestRef.current = null;
     updateCheckRef.current?.abort();
     updateCheckRef.current = null;
   }, []);
@@ -486,6 +491,55 @@ const selectedPage =
       if (syncRequestRef.current === controller) {
         syncRequestRef.current = null;
         if (!controller.signal.aborted) setIsSyncing(false);
+      }
+    }
+  }
+
+  async function handlePageChange(event) {
+    const pagePath = event.target.value;
+    if (
+      pagePath === selectedPage
+      || pageSwitchRequestRef.current
+      || candidateRunning
+    ) return;
+
+    const controller = new AbortController();
+    pageSwitchRequestRef.current = controller;
+    setSelectedPage(pagePath);
+    setPageSwitchError("");
+    setIsSwitchingPage(true);
+
+    try {
+      const response = await fetch(
+        `/api/jobs/${encodeURIComponent(analysis.job_id)}/pages/`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ page_path: pagePath }),
+          signal: controller.signal,
+        },
+      );
+      const data = await response.json().catch(() => null);
+      if (controller.signal.aborted || pageSwitchRequestRef.current !== controller) return;
+      if (!response.ok) {
+        throw new Error(
+          data?.error || data?.detail || "Could not switch HTML pages.",
+        );
+      }
+      if (!data?.job_id) {
+        throw new Error("The page-switch request returned an unexpected response.");
+      }
+
+      onRefresh();
+    } catch (error) {
+      if (!controller.signal.aborted && pageSwitchRequestRef.current === controller) {
+        setSelectedPage(analysis.page_path);
+        setPageSwitchError(error.message || "Could not switch HTML pages.");
+      }
+    } finally {
+      if (pageSwitchRequestRef.current === controller) {
+        pageSwitchRequestRef.current = null;
+        if (!controller.signal.aborted) setIsSwitchingPage(false);
       }
     }
   }
@@ -627,8 +681,9 @@ const selectedPage =
                     HTML page
                     <select
                       value={selectedPage}
-                      onChange={(event) => setSelectedPage(event.target.value)}
+                      onChange={handlePageChange}
                       aria-label="Switch HTML page"
+                      disabled={isSwitchingPage || candidateRunning}
                     >
                       {availablePages.map((page) => (
                         <option key={page} value={page}>{page}</option>
@@ -659,6 +714,12 @@ const selectedPage =
 
         {isSyncing && <p role="status" data-export-ignore>Checking repository…</p>}
         {syncError && <p role="alert" data-export-ignore>{syncError}</p>}
+        {pageSwitchError && <p role="alert" data-export-ignore>{pageSwitchError}</p>}
+        {isSwitchingPage && (
+          <p role="status" data-export-ignore>
+            Preparing screenshots for {selectedPage}…
+          </p>
+        )}
 
         {/* A failed refresh keeps the loaded project on screen; Retry loads it again (no new update is sent). */}
         {loadError && (
@@ -674,7 +735,9 @@ const selectedPage =
         {/* The update below is separate from the results on this page, which are still the displayed analysis. */}
         {candidateRunning && (
           <p role="status" data-export-ignore>
-            {describeUpdateProgress(updateAttempt)}. The results below stay available until it succeeds.
+            {updateAttempt.page_path === selectedPage
+              ? `Capturing ${selectedPage} — ${updateAttempt.progress.processed} / ${updateAttempt.progress.total} processed`
+              : `${describeUpdateProgress(updateAttempt)}. The results below stay available until it succeeds.`}
           </p>
         )}
         {unfinishedUpdate && (
