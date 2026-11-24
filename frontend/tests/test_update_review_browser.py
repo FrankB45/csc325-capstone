@@ -63,6 +63,7 @@ def saved_project(project_id="saved-project", url=SAVED_URL, name="Saved project
             "commits": [
                 {
                     "sha": sha, "message": "Saved commit " + str(index + 1),
+                    "author_name": "Saved author " + str(index + 1),
                     "date": "2026-11-16T10:00:00Z", "status": "complete",
                     "error_message": "", "position": index,
                     "screenshot_url": f"/api/jobs/{job_id}/captures/{index}/image/",
@@ -115,7 +116,7 @@ def accepted_report():
 def fresh_commits():
     return {
         "commits": [
-            {"sha": sha, "message": "Fresh commit " + str(index + 1), "date": "2026-11-17T10:00:00Z"}
+            {"sha": sha, "message": "Fresh commit " + str(index + 1), "date": "2026-11-17T10:00:00Z", "author_name": "Fresh author " + str(index + 1)}
             for index, sha in enumerate(FRESH_SHAS)
         ],
         "preselected": FRESH_SHAS[:],
@@ -298,6 +299,77 @@ class UpdateReviewBrowserTests(unittest.TestCase):
     def open_source(self):
         self.page.goto(ORIGIN + "/projects/saved-project/timeline")
         expect(self.page.get_by_role("button", name="Sync Updates", exact=True)).to_be_visible()
+
+    def test_timeline_hover_shows_the_current_commit_details(self):
+        self.open_source()
+
+        first = self.page.get_by_role("button", name=re.compile("^Select commit 1111111:"))
+        second = self.page.get_by_role("button", name=re.compile("^Select commit 2222222:"))
+
+        first.hover()
+        first_info = self.page.locator("[role=tooltip]").filter(has_text="Saved commit 1")
+        expect(first_info).to_have_css("opacity", "1")
+        expect(first_info).to_contain_text("Saved author 1")
+        expect(first_info).to_contain_text(FIRST_SHA[:7])
+        expect(first_info).to_contain_text("11/16/26")
+
+        second.hover()
+        second_info = self.page.locator("[role=tooltip]").filter(has_text="Saved commit 2")
+        expect(second_info).to_have_css("opacity", "1")
+        expect(second_info).to_contain_text("Saved author 2")
+        expect(second_info).to_contain_text(SECOND_SHA[:7])
+        expect(second_info).to_contain_text("11/16/26")
+        expect(first_info).to_have_css("opacity", "0")
+
+    def test_failed_capture_keeps_commit_details_and_reason(self):
+        self.source["analysis"]["commits"][1].update({
+            "status": "failed",
+            "error_message": "Page did not load.",
+            "screenshot_url": None,
+        })
+        self.open_source()
+
+        failed_commit = self.page.get_by_role(
+            "button",
+            name=re.compile("^Select commit 2222222:"),
+        )
+        failed_commit.hover()
+
+        info = self.page.locator("[role=tooltip]").filter(has_text="Saved commit 2")
+        expect(info).to_have_css("opacity", "1")
+        expect(info).to_contain_text("Saved author 2")
+        expect(info).to_contain_text(SECOND_SHA[:7])
+        expect(info).to_contain_text("Capture failed: Page did not load.")
+
+    def test_single_commit_hover_keeps_the_detail_card_inside_the_timeline(self):
+        self.source = saved_project(shas=[FIRST_SHA])
+        self.open_source()
+
+        commit = self.page.get_by_role(
+            "button",
+            name=re.compile("^Select commit 1111111:"),
+        )
+        commit.hover()
+
+        info = self.page.locator("[role=tooltip]").filter(has_text="Saved commit 1")
+        expect(info).to_have_css("opacity", "1")
+        expect(info).to_contain_text("Saved author 1")
+
+        info_box = info.bounding_box()
+        timeline_box = self.page.get_by_role("list", name="Commit timeline", exact=True).bounding_box()
+        self.assertIsNotNone(info_box)
+        self.assertIsNotNone(timeline_box)
+        self.assertGreaterEqual(info_box["x"], timeline_box["x"])
+        self.assertLessEqual(
+            info_box["x"] + info_box["width"],
+            timeline_box["x"] + timeline_box["width"],
+        )
+
+        item = commit.locator("..")
+        line_width = item.evaluate(
+            "element => getComputedStyle(element, '::before').width"
+        )
+        self.assertGreater(float(line_width.removesuffix("px")), 0)
 
     def open_review(self):
         self.page.get_by_role("button", name="Sync Updates", exact=True).click()
