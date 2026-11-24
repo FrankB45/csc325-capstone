@@ -14,8 +14,13 @@ from .services.github import (
 
 from django.core.exceptions import ValidationError
 
-from .serializers import CreateAnalysisSerializer, CreateComparisonSerializer, ComparisonSerializer
-from .services.analysis_setup import AnalysisSetupError, start_analysis
+from .serializers import (
+    CreateAnalysisSerializer,
+    CreatePageAnalysisSerializer,
+    CreateComparisonSerializer,
+    ComparisonSerializer,
+)
+from .services.analysis_setup import AnalysisSetupError, start_analysis, start_page_analysis
 
 from bson import ObjectId
 from bson.errors import InvalidId
@@ -162,6 +167,30 @@ def create_analysis(request):
     )
 
     
+@api_view(["POST"])
+def create_page_analysis(request, job_id):
+    serializer = CreatePageAnalysisSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    try:
+        job = start_page_analysis(job_id, serializer.validated_data["page_path"])
+    except AnalysisSetupError as error:
+        return Response({"error": str(error)}, status=error.status_code)
+    except ValidationError as error:
+        return Response({"error": error.messages}, status=400)
+
+    return Response(
+        {
+            "job_id": str(job.pk),
+            "project_id": str(job.repo_snapshot.project_id),
+            "snapshot_id": str(job.repo_snapshot_id),
+            "status": job.status,
+            "total_captures": len(job.captures),
+        },
+        status=202,
+    )
+
+
 @api_view(["POST"])
 def check_repository_compatibility(request):
     """Return the compatibility report and its limited-MVP setup decision."""

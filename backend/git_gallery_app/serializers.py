@@ -35,6 +35,12 @@ class CreateAnalysisSerializer(serializers.Serializer):
                 "project_id": "Include the existing project being updated.",
             })
         return attrs
+
+
+class CreatePageAnalysisSerializer(serializers.Serializer):
+    page_path = serializers.CharField(max_length=500, trim_whitespace=False)
+
+
 class CreateComparisonSerializer(serializers.Serializer):
     first_position = serializers.IntegerField(min_value=0, max_value=9)
     second_position = serializers.IntegerField(min_value=0, max_value=9)

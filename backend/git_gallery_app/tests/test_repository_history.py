@@ -6,6 +6,8 @@ import requests
 
 from ..services.github import (
     check_repository_history,
+    get_commit_file_changes,
+    get_commit_shas_for_path,
     get_repository_information,
 )
 class RepositoryHistoryTests(TestCase):
@@ -69,6 +71,57 @@ class RepositoryHistoryTests(TestCase):
         self.assertEqual(result["commit_count"], 1)
         self.assertIn("HTML-page and unsupported-dependency checks", result["reason"])
         self.assertNotIn("compatible", result)
+
+    def test_get_commit_file_changes_returns_paths_and_statuses(self):
+        commit_sha = "a" * 40
+        self.mock_get.side_effect = [
+            self.make_response({
+                "files": [
+                    {"filename": "index.html", "status": "modified"},
+                    {"filename": "pages/about.html", "status": "added"},
+                    {"filename": "old.html", "status": "removed"},
+                    {"filename": "work.html", "status": "renamed"},
+                ],
+            })
+        ]
+
+        changes = get_commit_file_changes(self.repo_url, commit_sha)
+
+        self.assertEqual(changes, {
+            "index.html": "modified",
+            "pages/about.html": "added",
+            "old.html": "removed",
+            "work.html": "renamed",
+        })
+        self.mock_get.assert_called_once()
+        self.assertEqual(
+            self.mock_get.call_args.args[0],
+            f"https://api.github.com/repos/example/site/commits/{commit_sha}",
+        )
+
+    def test_get_commit_file_changes_rejects_incomplete_response(self):
+        self.mock_get.side_effect = [self.make_response({})]
+
+        with self.assertRaisesRegex(ValueError, "incomplete commit file listing"):
+            get_commit_file_changes(self.repo_url, "a" * 40)
+
+    def test_get_commit_shas_for_path_uses_snapshot_ref(self):
+        snapshot_sha = "b" * 40
+        commit_sha = "a" * 40
+        self.mock_get.side_effect = [self.make_response([{"sha": commit_sha}])]
+
+        shas = get_commit_shas_for_path(
+            self.repo_url,
+            "pages/about us.html",
+            ref=snapshot_sha,
+        )
+
+        self.assertEqual(shas, {commit_sha})
+        self.assertEqual(self.mock_get.call_args.kwargs["params"], {
+            "path": "pages/about us.html",
+            "sha": snapshot_sha,
+            "per_page": 51,
+        })
 
     def test_fifty_commits_without_a_next_page_passes(self):
         result = self.check_history(self.make_response(self.make_commits(50)))

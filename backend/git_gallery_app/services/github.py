@@ -1,5 +1,6 @@
 from urllib.parse import quote, urlparse
 import os
+import re
 
 import requests
 
@@ -111,6 +112,85 @@ def get_commit_history(
         }
         for item in reversed(items)
     ]
+
+
+def get_commit_shas_for_path(
+    repo_url: str,
+    path: str,
+    *,
+    ref: str,
+) -> set[str]:
+    """Return commits in a snapshot's history that changed one path."""
+    if not isinstance(ref, str) or not re.fullmatch(r"[0-9a-f]{40}", ref):
+        raise ValueError("Expected a full snapshot commit SHA.")
+    if not isinstance(path, str) or not path:
+        raise ValueError("Expected a non-empty repository path.")
+
+    owner, repo = parse_github_url(repo_url)
+    response = requests.get(
+        f"https://api.github.com/repos/{quote(owner, safe='')}/"
+        f"{quote(repo, safe='')}/commits",
+        headers=github_headers(),
+        params={
+            "path": path,
+            "sha": ref,
+            "per_page": MAX_HISTORY_COMMITS + 1,
+        },
+        timeout=10,
+    )
+    response.raise_for_status()
+    items = response.json()
+
+    if not isinstance(items, list):
+        raise ValueError("GitHub returned an invalid path history.")
+    if len(items) > MAX_HISTORY_COMMITS:
+        raise ValueError("GitHub returned more than 50 commits for this page.")
+
+    shas = set()
+    for item in items:
+        sha = item.get("sha") if isinstance(item, dict) else None
+        if not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{40}", sha):
+            raise ValueError("GitHub returned an invalid commit in the page history.")
+        shas.add(sha)
+
+    return shas
+
+
+def get_commit_file_changes(repo_url: str, commit_sha: str) -> dict[str, str]:
+    """Return each changed file's path and status for one commit."""
+    if not isinstance(commit_sha, str) or not re.fullmatch(r"[0-9a-f]{40}", commit_sha):
+        raise ValueError("Expected a full commit SHA.")
+
+    owner, repo = parse_github_url(repo_url)
+    response = requests.get(
+        f"https://api.github.com/repos/{quote(owner, safe='')}/"
+        f"{quote(repo, safe='')}/commits/{commit_sha}",
+        headers=github_headers(),
+        timeout=10,
+    )
+    response.raise_for_status()
+    data = response.json()
+
+    if not isinstance(data, dict) or not isinstance(data.get("files"), list):
+        raise ValueError("GitHub returned an incomplete commit file listing.")
+
+    changes = {}
+    for item in data["files"]:
+        if not isinstance(item, dict):
+            raise ValueError("GitHub returned a malformed changed file.")
+
+        filename = item.get("filename")
+        status = item.get("status")
+        if (
+            not isinstance(filename, str)
+            or not filename
+            or status not in ("added", "modified", "removed", "renamed")
+        ):
+            raise ValueError("GitHub returned malformed changed-file details.")
+        changes[filename] = status
+
+    return changes
+
 
 def check_repository_history(repo_url: str) -> dict:
     """Check history only; HTML-page and dependency checks are still required."""

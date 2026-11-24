@@ -97,6 +97,8 @@ class ProjectUpdateTests(APITransactionTestCase):
                 }
                 for sha in self.fresh_shas
             ],
+            "get_commit_file_changes": {},
+            "get_commit_shas_for_path": set(),
             "_list_html_page_paths": ["index.html", "about.html"],
             "check_repository_dependencies": {"dependency_status": "passed", "reason": "Supported."},
         }
@@ -423,6 +425,111 @@ class ProjectUpdateTests(APITransactionTestCase):
         self.assertEqual(RepositorySnapshot.objects.count(), 2)
         self.assertEqual(Job.objects.count(), 2)
         self.assert_original_preserved()
+
+    def test_switching_html_page_reuses_saved_snapshot_and_commits(self):
+        self.original_snapshot.available_pages = [
+            "index.html",
+            "pages/about.html",
+            "work.html",
+        ]
+        self.original_snapshot.save(update_fields=["available_pages"])
+        self.github_mocks["get_commit_shas_for_path"].side_effect = [
+            {self.old_shas[1]},
+            {self.old_shas[0]},
+            set(),
+        ]
+        self.github_mocks["get_commit_file_changes"].side_effect = [
+            {"pages/about.html": "modified"},
+            {"index.html": "modified"},
+        ]
+
+        response = self.client.post(
+            f"/api/jobs/{self.original_job.pk}/pages/",
+            {"page_path": "pages/about.html"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 202, response.data)
+
+        page_job = Job.objects.get(pk=ObjectId(response.data["job_id"]))
+        self.assertEqual(page_job.repo_snapshot_id, self.original_snapshot.pk)
+        self.assertEqual(page_job.page_path, "pages/about.html")
+        self.assertEqual(
+            [capture.commit_sha for capture in page_job.captures],
+            [self.old_shas[1]],
+        )
+
+        self.set_outcome(
+            page_job,
+            Job.Status.COMPLETE,
+            [Capture.Status.COMPLETE],
+        )
+        details = self.client.get(f"/api/projects/{self.project.pk}/").data
+        self.assertEqual(details["analysis"]["job_id"], str(page_job.pk))
+        self.assertEqual(details["analysis"]["page_path"], "pages/about.html")
+        self.assertEqual(
+            [commit["status"] for commit in details["analysis"]["commits"]],
+            [Capture.Status.COMPLETE],
+        )
+
+        index_response = self.client.post(
+            f"/api/jobs/{page_job.pk}/pages/",
+            {"page_path": "index.html"},
+            format="json",
+        )
+        self.assertEqual(index_response.status_code, 202, index_response.data)
+        index_job = Job.objects.get(pk=ObjectId(index_response.data["job_id"]))
+        self.assertEqual(
+            [capture.commit_sha for capture in index_job.captures],
+            [self.old_shas[0]],
+        )
+        self.set_outcome(index_job, Job.Status.COMPLETE, [Capture.Status.COMPLETE])
+
+        no_changes = self.client.post(
+            f"/api/jobs/{index_job.pk}/pages/",
+            {"page_path": "work.html"},
+            format="json",
+        )
+        self.assertEqual(no_changes.status_code, 400)
+        self.assertIn("No selected commits changed", no_changes.data["error"])
+        self.assertEqual(Job.objects.count(), 3)
+
+    def test_page_switch_rejects_unavailable_pages_and_busy_projects(self):
+        self.original_snapshot.available_pages = ["index.html", "about.html"]
+        self.original_snapshot.save(update_fields=["available_pages"])
+        before = Job.objects.count()
+
+        missing_page = self.client.post(
+            f"/api/jobs/{self.original_job.pk}/pages/",
+            {"page_path": "missing.html"},
+            format="json",
+        )
+        self.assertEqual(missing_page.status_code, 400)
+        self.assertEqual(Job.objects.count(), before)
+
+        create_job(self.original_snapshot, "about.html", self.old_shas)
+        busy_response = self.client.post(
+            f"/api/jobs/{self.original_job.pk}/pages/",
+            {"page_path": "about.html"},
+            format="json",
+        )
+        self.assertEqual(busy_response.status_code, 409)
+
+    def test_page_switch_reports_github_lookup_failures(self):
+        self.original_snapshot.available_pages = ["index.html", "about.html"]
+        self.original_snapshot.save(update_fields=["available_pages"])
+        self.github_mocks["get_commit_shas_for_path"].side_effect = requests.HTTPError(
+            "GitHub rate limit exceeded."
+        )
+
+        response = self.client.post(
+            f"/api/jobs/{self.original_job.pk}/pages/",
+            {"page_path": "about.html"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 502)
+        self.assertIn("GitHub rate limit exceeded", response.data["error"])
+        self.assertEqual(Job.objects.count(), 1)
 
     def test_repeated_updates_keep_the_latest_success_until_another_succeeds(self):
         first = self.create_candidate()

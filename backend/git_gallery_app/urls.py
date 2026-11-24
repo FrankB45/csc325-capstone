@@ -7,6 +7,7 @@ from .views import (
     check_repository_compatibility, 
     get_commits, 
     create_analysis, 
+    create_page_analysis,
     get_project, 
     get_capture_image, 
     get_projects,
@@ -20,6 +21,7 @@ urlpatterns = [
     path("repo/info/", get_repository, name="get-repository-info"),
     path("repo/commits/", get_commits, name="get-repository-commits"),
     path("analyses/", create_analysis, name="create-analysis"),
+    path("jobs/<str:job_id>/pages/", create_page_analysis, name="create-page-analysis"),
     path("projects/<str:project_id>/", get_project, name="get-project"),
     path(
         "jobs/<str:job_id>/captures/<int:position>/image/",

@@ -1,3 +1,6 @@
+import logging
+import requests
+
 from bson import ObjectId
 from bson.errors import InvalidId
 from django.utils.dateparse import parse_datetime
@@ -7,6 +10,8 @@ from ..models import Commit, Job, Project, RepositorySnapshot
 from .dependencies import check_repository_dependencies
 from .github import (
     _list_html_page_paths,
+    get_commit_file_changes,
+    get_commit_shas_for_path,
     get_branch_revision,
     get_commit_history,
     get_repository_information,
@@ -14,6 +19,8 @@ from .github import (
 )
 from .jobs import create_job
 from .projects import select_project_jobs
+
+logger = logging.getLogger(__name__)
 
 
 class AnalysisSetupError(ValueError):
@@ -152,3 +159,91 @@ def start_analysis(
     snapshot.save()
 
     return create_job(snapshot, page_path, selected)
+
+
+def start_page_analysis(source_job_id, page_path):
+    try:
+        source_job_key = ObjectId(source_job_id)
+    except (InvalidId, TypeError):
+        raise AnalysisSetupError("The saved analysis ID is invalid.")
+
+    try:
+        source_job = Job.objects.get(pk=source_job_key)
+    except Job.DoesNotExist:
+        raise AnalysisSetupError("The saved analysis was not found.", status_code=404)
+
+    project = source_job.repo_snapshot.project
+    jobs = list(
+        Job.objects.filter(repo_snapshot__project=project)
+        .order_by("-created_at", "-pk")
+    )
+    if any(job.status in (Job.Status.QUEUED, Job.Status.PROCESSING) for job in jobs):
+        raise AnalysisSetupError(
+            "This project is already being processed. Wait for it to finish before switching pages.",
+            status_code=409,
+        )
+
+    active_job, _ = select_project_jobs(jobs)
+    if active_job is None or active_job.pk != source_job.pk:
+        raise AnalysisSetupError(
+            "The saved analysis has changed. Reload the project before switching pages.",
+            status_code=409,
+        )
+
+    snapshot = source_job.repo_snapshot
+    if page_path not in snapshot.available_pages:
+        raise AnalysisSetupError("The selected page is not in this snapshot.")
+    if page_path == source_job.page_path:
+        raise AnalysisSetupError("The selected page is already displayed.")
+
+    baseline_job = (
+        Job.objects.filter(repo_snapshot=snapshot)
+        .order_by("created_at", "pk")
+        .first()
+    )
+    try:
+        page_change_shas = get_commit_shas_for_path(
+            snapshot.repository_url,
+            page_path,
+            ref=snapshot.head_sha,
+        )
+    except (requests.RequestException, ValueError, TypeError) as error:
+        logger.exception("Could not retrieve commit history for HTML page %s.", page_path)
+        raise AnalysisSetupError(
+            f"Could not check which commits changed this page: {error}",
+            status_code=502,
+        ) from error
+
+    selected_commit_shas = []
+    for capture in sorted(baseline_job.captures, key=lambda item: item.position):
+        if capture.commit_sha not in page_change_shas:
+            continue
+
+        try:
+            file_changes = get_commit_file_changes(
+                snapshot.repository_url,
+                capture.commit_sha,
+            )
+        except (requests.RequestException, ValueError, TypeError) as error:
+            logger.exception(
+                "Could not retrieve changed files for commit %s and page %s.",
+                capture.commit_sha,
+                page_path,
+            )
+            raise AnalysisSetupError(
+                f"Could not verify page changes for commit {capture.commit_sha[:7]}: {error}",
+                status_code=502,
+            ) from error
+
+        if file_changes.get(page_path) in ("added", "modified", "renamed"):
+            selected_commit_shas.append(capture.commit_sha)
+
+    if not selected_commit_shas:
+        raise AnalysisSetupError(
+            f"No selected commits changed the HTML page {page_path!r}."
+        )
+
+    try:
+        return create_job(snapshot, page_path, selected_commit_shas)
+    except ValueError as error:
+        raise AnalysisSetupError(str(error))

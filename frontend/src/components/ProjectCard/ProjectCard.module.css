@@ -3,6 +3,8 @@
 .text { padding: 0 10px; }
 .headingRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .name { margin: 0; font-size: clamp(24px, 2.2vw, 32px); font-weight: 600; line-height: 1.25; color: var(--color-navy); }
+.nameLink { color: inherit; text-decoration: none; }
+.nameLink:hover, .nameLink:focus-visible { text-decoration: underline; }
 .meta { margin: 0; font-size: 20px; line-height: 1.2; color: var(--color-purple); }
 .name + .meta { margin-top: 4px; }
 .truncate {
