@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import { Link } from "react-router-dom";
 import DetailsButton from "../DetailsButton/DetailsButton.jsx";
 import LoadingDots from "../LoadingDots/LoadingDots.jsx";
+import trashCanIcon from "../../assets/trash-can.svg";
 import { formatDate } from "../../utils/format.js";
 import {
   describeUpdateProgress,
@@ -63,7 +64,12 @@ const ProjectCard = ({ project, onDelete }) => {
               onClick={() => onDelete(project)}
               aria-label={`Delete ${project.name}`}
             >
-              Delete
+              <img
+                src={trashCanIcon}
+                alt=""
+                className={styles.deleteIcon}
+                aria-hidden="true"
+              />
             </button>
           )}
         </div>
