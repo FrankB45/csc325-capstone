@@ -43,5 +43,6 @@
 }
 
 .actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.delete { padding: 0; border: none; background: none; font: inherit; font-size: 18px; font-weight: 600; color: var(--color-error); cursor: pointer; }
-.delete:hover, .delete:focus-visible { text-decoration: underline; }
+.delete { display: inline-grid; place-items: center; width: 36px; height: 36px; padding: 4px; border: none; border-radius: 6px; background: none; cursor: pointer; }
+.delete:hover, .delete:focus-visible { background: color-mix(in srgb, var(--color-coral) 12%, transparent); }
+.deleteIcon { width: 28px; height: 28px; }
