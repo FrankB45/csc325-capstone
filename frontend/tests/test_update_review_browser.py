@@ -341,6 +341,36 @@ class UpdateReviewBrowserTests(unittest.TestCase):
         expect(info).to_contain_text(SECOND_SHA[:7])
         expect(info).to_contain_text("Capture failed: Page did not load.")
 
+    def test_single_commit_hover_keeps_the_detail_card_inside_the_timeline(self):
+        self.source = saved_project(shas=[FIRST_SHA])
+        self.open_source()
+
+        commit = self.page.get_by_role(
+            "button",
+            name=re.compile("^Select commit 1111111:"),
+        )
+        commit.hover()
+
+        info = self.page.locator("[role=tooltip]").filter(has_text="Saved commit 1")
+        expect(info).to_have_css("opacity", "1")
+        expect(info).to_contain_text("Saved author 1")
+
+        info_box = info.bounding_box()
+        timeline_box = self.page.get_by_role("list", name="Commit timeline", exact=True).bounding_box()
+        self.assertIsNotNone(info_box)
+        self.assertIsNotNone(timeline_box)
+        self.assertGreaterEqual(info_box["x"], timeline_box["x"])
+        self.assertLessEqual(
+            info_box["x"] + info_box["width"],
+            timeline_box["x"] + timeline_box["width"],
+        )
+
+        item = commit.locator("..")
+        line_width = item.evaluate(
+            "element => getComputedStyle(element, '::before').width"
+        )
+        self.assertGreater(float(line_width.removesuffix("px")), 0)
+
     def open_review(self):
         self.page.get_by_role("button", name="Sync Updates", exact=True).click()
         expect(self.page.get_by_role("heading", name="Review update", exact=True)).to_be_visible()
