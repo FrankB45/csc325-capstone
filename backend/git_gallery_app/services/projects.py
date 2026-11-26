@@ -10,7 +10,7 @@ def select_project_jobs(jobs):
     if not jobs:
         return None, None
 
-    # Keep the original analysis, even if it failed, until an update fully succeeds.
+    # Keep analyses on newer snapshots from replacing saved results until fully successful.
     active_job = jobs[-1]
     for job in jobs:
         if job.status != Job.Status.COMPLETE or not job.captures:
@@ -21,6 +21,16 @@ def select_project_jobs(jobs):
         ):
             active_job = job
             break
+
+    newest_job = jobs[0]
+    if (
+        active_job is not None
+        and newest_job.repo_snapshot_id == active_job.repo_snapshot_id
+        and newest_job.page_path != active_job.page_path
+        and newest_job.status not in (Job.Status.QUEUED, Job.Status.PROCESSING)
+    ):
+        # A terminal job on the same snapshot is a recapture of another HTML page.
+        active_job = newest_job
 
     latest_update = jobs[0] if len(jobs) > 1 else None
     return active_job, latest_update

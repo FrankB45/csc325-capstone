@@ -1,4 +1,33 @@
-.pager { display: flex; justify-content: center; gap: 6px; margin-top: 64px; }
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: fit-content;
+  margin: 64px auto 0;
+  padding: 8px 12px;
+  border: 1px solid rgba(11, 37, 69, 0.1);
+  border-radius: 999px;
+  background: var(--color-white);
+  box-shadow: 0 6px 18px rgba(11, 37, 69, 0.1);
+}
+.control {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-navy);
+  cursor: pointer;
+  transition: background-color 200ms, color 200ms;
+}
+.control svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.control:hover:not(:disabled) { background: var(--color-light-purple); }
+.control:focus-visible { outline: 2px solid var(--color-indigo); outline-offset: 2px; }
+.control:disabled { opacity: 0.35; cursor: default; }
 .dot {
   width: 24px;
   height: 24px;
@@ -10,4 +39,4 @@
   transition: background-color 200ms;
 }
 .dot:hover { background: var(--color-light-purple); }
-.active { background: #777; }
+.active { background: var(--color-navy); }

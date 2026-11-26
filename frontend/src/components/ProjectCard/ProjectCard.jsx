@@ -54,13 +54,16 @@ const ProjectCard = ({ project, onDelete }) => {
   const repository = project.repository_owner && project.repository_name
     ? `${project.repository_owner}/${project.repository_name}`
     : null;
+  const projectPath = `/projects/${project.id}/timeline`;
 
   return (
     <article className={styles.card}>
       <div className={styles.text}>
         <div className={styles.headingRow}>
           <h2 className={`${styles.name} ${styles.truncate}`} title={project.name}>
-            {project.name}
+            <Link to={projectPath} className={styles.nameLink}>
+              {project.name}
+            </Link>
           </h2>
           {onDelete && (
             <button
@@ -106,7 +109,7 @@ const ProjectCard = ({ project, onDelete }) => {
       </div>
 
       <Link
-        to={`/projects/${project.id}/timeline`}
+        to={projectPath}
         className={styles.frameLink}
         aria-label={`Open ${project.name}`}
       >
