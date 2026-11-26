@@ -1,6 +1,5 @@
 import PageLayout from "../components/PageLayout/PageLayout.jsx";
 import FaqItem from "../components/FaqItem/FaqItem.jsx";
-import AssistantChat from "../components/AssistantChat/AssistantChat.jsx";
 import styles from "./Info.module.css";
 
 const STEPS = [
@@ -51,16 +50,13 @@ const CheckIcon = () => (
   </svg>
 );
 
-// TODO: send the question to the backend AI endpoint.
-const askAssistant = async () => "The assistant isn’t connected to the backend yet.";
-
 const Info = () => (
   <PageLayout width="xwide">
     <div className={styles.page}>
       <h1 className={styles.title}>About Git Gallery</h1>
       <p className={styles.intro}>
         Git Gallery turns a developer tool — version control — into a visual story anyone can follow.
-        Below you’ll find answers to common questions, and an AI assistant ready to help.
+        Below you’ll find answers to common questions.
       </p>
 
       <h2 className={styles.heading}>How it works</h2>
@@ -80,10 +76,6 @@ const Info = () => (
           <FaqItem key={f.q} question={f.q}>{f.a}</FaqItem>
         ))}
       </div>
-
-      <h2 className={`${styles.heading} ${styles.assistantHeading}`}>Ask the AI Assistant</h2>
-      <p className={styles.sub}>Can’t find your answer above? Ask the assistant anything about Git Gallery.</p>
-      <AssistantChat onAsk={askAssistant} />
 
       <section className={`${styles.gradientBox} ${styles.requirements}`} aria-labelledby="repo-reqs">
         <h2 id="repo-reqs" className={styles.reqTitle}>Repository requirements</h2>
